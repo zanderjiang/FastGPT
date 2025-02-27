@@ -1,0 +1,13 @@
+pnpm --prefix ./projects/app dev
+
+> app@4.8.8 dev /home/ubuntu/FastGPT/projects/app
+> next dev
+
+  ▲ Next.js 14.2.5
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+  - Experiments (use with caution):
+    · outputFileTracingRoot
+
+ ✓ Starting...
+ ✓ Ready in 3.4s

@@ -2,14 +2,14 @@ import { PromptTemplateItem } from '../type.d';
 
 export const Prompt_QuoteTemplateList: PromptTemplateItem[] = [
   {
-    title: '标准模板',
-    desc: '标准提示词，用于结构不固定的知识库。',
+    title: 'Standard Template',
+    desc: 'Standard prompt for knowledge bases with flexible structures.',
     value: `{{q}}
 {{a}}`
   },
   {
-    title: '问答模板',
-    desc: '适合 QA 问答结构的知识库，可以让AI较为严格的按预设内容回答',
+    title: 'QA Template',
+    desc: 'Suitable for QA structured knowledge bases, ensuring AI responds strictly according to preset content.',
     value: `<Question>
 {{q}}
 </Question>
@@ -18,14 +18,14 @@ export const Prompt_QuoteTemplateList: PromptTemplateItem[] = [
 </Answer>`
   },
   {
-    title: '标准严格模板',
-    desc: '在标准模板基础上，对模型的回答做更严格的要求。',
+    title: 'Strict Standard Template',
+    desc: 'A more stringent version of the standard template.',
     value: `{{q}}
 {{a}}`
   },
   {
-    title: '严格问答模板',
-    desc: '在问答模板基础上，对模型的回答做更严格的要求。',
+    title: 'Strict QA Template',
+    desc: 'A more stringent version of the QA template.',
     value: `<Question>
 {{q}}
 </Question>
@@ -37,85 +37,80 @@ export const Prompt_QuoteTemplateList: PromptTemplateItem[] = [
 
 export const Prompt_QuotePromptList: PromptTemplateItem[] = [
   {
-    title: '标准模板',
+    title: 'Standard Template',
     desc: '',
-    value: `使用 <Data></Data> 标记中的内容作为你的知识:
+    value: `Use the content marked by <Data></Data> as your knowledge:
 
 <Data>
 {{quote}}
 </Data>
 
-回答要求：
-- 如果你不清楚答案，你需要澄清。
-- 避免提及你是从 <Data></Data> 获取的知识。
-- 保持答案与 <Data></Data> 中描述的一致。
-- 使用 Markdown 语法优化回答格式。
-- 使用与问题相同的语言回答。
+Response Requirements:
+- If you are unsure of the answer, you need to clarify.
+- Avoid mentioning that you acquired the knowledge from <Data></Data>.
+- Keep the answer consistent with the description in <Data></Data>.
+- Use Markdown syntax to optimize the format of the response.
+- Answer in the same language as the question.
 
-问题:"""{{question}}"""`
+Question:"""{{question}}"""`
   },
   {
-    title: '问答模板',
+    title: 'QA Template',
     desc: '',
-    value: `使用 <QA></QA> 标记中的问答对进行回答。
+    value: `Use the Q&A pairs marked by <QA></QA> to respond.
 
 <QA>
 {{quote}}
 </QA>
 
-回答要求：
-- 选择其中一个或多个问答对进行回答。
-- 回答的内容应尽可能与 <答案></答案> 中的内容一致。
-- 如果没有相关的问答对，你需要澄清。
-- 避免提及你是从 QA 获取的知识，只需要回复答案。
+Response Requirements:
+- Select one or more Q&A pairs to respond.
+- The content of the response should be as consistent as possible with the content in <Answer></Answer>.
+- If there are no relevant Q&A pairs, you need to clarify.
+- Avoid mentioning that you acquired the knowledge from QA, just provide the answer.
 
-问题:"""{{question}}"""`
+Question:"""{{question}}"""`
   },
   {
-    title: '标准严格模板',
+    title: 'Strict Standard Template',
     desc: '',
-    value: `忘记你已有的知识，仅使用 <Data></Data> 标记中的内容作为你的知识:
+    value: `Forget your existing knowledge, and only use the content marked by <Data></Data> as your knowledge:
 
 <Data>
 {{quote}}
 </Data>
 
-思考流程：
-1. 判断问题是否与 <Data></Data> 标记中的内容有关。
-2. 如果有关，你按下面的要求回答。
-3. 如果无关，你直接拒绝回答本次问题。
+Thought Process:
+1. Determine if the question is related to the content marked by <Data></Data>.
+2. If related, answer according to the following requirements.
+3. If unrelated, refuse to answer the question.
 
-回答要求：
-- 避免提及你是从 <Data></Data> 获取的知识。
-- 保持答案与 <Data></Data> 中描述的一致。
-- 使用 Markdown 语法优化回答格式。
-- 使用与问题相同的语言回答。
+Response Requirements:
+- Avoid mentioning that you acquired the knowledge from <Data></Data>.
+- Keep the answer consistent with the description in <Data></Data>.
+- Use Markdown syntax to optimize the format of the response.
+- Answer in the same language as the question.
 
-问题:"""{{question}}"""`
+Question:"""{{question}}"""`
   },
   {
-    title: '严格问答模板',
+    title: 'Strict QA Template',
     desc: '',
-    value: `忘记你已有的知识，仅使用 <QA></QA> 标记中的问答对进行回答。
+    value: `Forget your existing knowledge, and only use the Q&A pairs marked by <QA></QA> to respond.
 
 <QA>
 {{quote}}
 </QA>
 
-思考流程：
-1. 判断问题是否与 <QA></QA> 标记中的内容有关。
-2. 如果无关，你直接拒绝回答本次问题。
-3. 判断是否有相近或相同的问题。
-4. 如果有相同的问题，直接输出对应答案。
-5. 如果只有相近的问题，请把相近的问题和答案一起输出。
+Thought Process:
+1. Determine if the question is related to the content marked by <QA></QA>.
+2. If unrelated, refuse to answer the question.
+3. Determine if there are similar or identical questions.
+4. If there is an identical question, directly output the corresponding answer.
+5. If there are only similar questions, output the similar question and answer together.
 
-回答要求：
-- 如果没有相关的问答对，你需要澄清。
-- 回答的内容应尽可能与 <QA></QA> 标记中的内容一致。
-- 避免提及你是从 QA 获取的知识，只需要回复答案。
-- 使用 Markdown 语法优化回答格式。
-- 使用与问题相同的语言回答。
+Finally, avoid mentioning that you acquired the knowledge from QA, just provide the answer.
 
-问题:"""{{question}}"""`
+Question:"""{{question}}"""`
   }
 ];

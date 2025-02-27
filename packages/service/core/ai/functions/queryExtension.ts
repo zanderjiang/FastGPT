@@ -10,89 +10,164 @@ import { chatValue2RuntimePrompt } from '@fastgpt/global/core/chat/adapt';
     可以根据上下文，消除指代性问题以及扩展问题，利于检索。
 */
 
-const defaultPrompt = `作为一个向量检索助手，你的任务是结合历史记录，从不同角度，为“原问题”生成个不同版本的“检索词”，从而提高向量检索的语义丰富度，提高向量检索的精度。生成的问题要求指向对象清晰明确，并与“原问题语言相同”。例如：
-历史记录: 
+const defaultPrompt = `As a vector retrieval assistant, your task is to generate different versions of "retrieval terms" for the "original question" from different perspectives, combining historical records to improve the semantic richness and precision of vector retrieval. The generated questions must be clear and specific to the subject, and use the same language as the "original question". For example:
+History: 
 """
 """
-原问题: 介绍下剧情。
-检索词: ["介绍下故事的背景。","故事的主题是什么？","介绍下故事的主要人物。"]
+Original question: Tell me about the engine.
+Retrieval terms: ["Describe the engine specifications.", "What is the engine capacity?", "What type of engine does it have?"]
 ----------------
-历史记录: 
+History: 
 """
-Q: 对话背景。
-A: 当前对话是关于 Nginx 的介绍和使用等。
+Q: Dialogue background.
+A: The current dialogue is about the 2024 Toyota Camry's features and specifications.
 """
-原问题: 怎么下载
-检索词: ["Nginx 如何下载？","下载 Nginx 需要什么条件？","有哪些渠道可以下载 Nginx？"]
+Original question: What is the fuel efficiency?
+Retrieval terms: ["What is the fuel efficiency of the 2024 Toyota Camry?", "How many miles per gallon does the 2024 Toyota Camry get?", "What is the fuel consumption rate of the 2024 Toyota Camry?"]
 ----------------
-历史记录: 
+History: 
 """
-Q: 对话背景。
-A: 当前对话是关于 Nginx 的介绍和使用等。
-Q: 报错 "no connection"
-A: 报错"no connection"可能是因为……
+Q: Dialogue background.
+A: The current dialogue is about the 2024 Ford Mustang's performance.
+Q: What is the horsepower?
+A: The 2024 Ford Mustang has a horsepower of 450.
 """
-原问题: 怎么解决
-检索词: ["Nginx报错"no connection"如何解决？","造成'no connection'报错的原因。","Nginx提示'no connection'，要怎么办？"]
+Original question: Tell me more about the performance.
+Retrieval terms: ["What are the performance specs of the 2024 Ford Mustang?", "How fast can the 2024 Ford Mustang go?", "What is the 0-60 mph time for the 2024 Ford Mustang?"]
 ----------------
-历史记录: 
+History: 
 """
-Q: 护产假多少天?
-A: 护产假的天数根据员工所在的城市而定。请提供您所在的城市，以便我回答您的问题。
+Q: How many seats does it have?
+A: The car has five seats.
 """
-原问题: 沈阳
-检索词: ["沈阳的护产假多少天？","沈阳的护产假政策。","沈阳的护产假标准。"]
+Original question: What about the interior features?
+Retrieval terms: ["What are the interior features of the car?", "Describe the cabin features.", "What technology is available inside the car?"]
 ----------------
-历史记录: 
+History: 
 """
-Q: 作者是谁？
-A: FastGPT 的作者是 labring。
+Q: Who is the manufacturer?
+A: The manufacturer is Tesla.
 """
-原问题: Tell me about him
-检索词: ["Introduce labring, the author of FastGPT." ," Background information on author labring." "," Why does labring do FastGPT?"]
+Original question: Tell me about the Model 3.
+Retrieval terms: ["Describe the specifications of the Tesla Model 3.", "What are the features of the Tesla Model 3?", "What is the range of the Tesla Model 3?"]
 ----------------
-历史记录:
+History:
 """
-Q: 对话背景。
-A: 关于 FatGPT 的介绍和使用等问题。
+Q: Dialogue background.
+A: Introduction and usage questions about electric vehicles.
 """
-原问题: 你好。
-检索词: ["你好"]
+Original question: Hi there.
+Retrieval terms: ["Hi there"]
 ----------------
-历史记录:
+History:
 """
-Q: FastGPT 如何收费？
-A: FastGPT 收费可以参考……
+Q: How is the maintenance for electric cars?
+A: Maintenance for electric cars can be less frequent than for traditional vehicles due to fewer moving parts.
 """
-原问题: 你知道 laf 么？
-检索词: ["laf 的官网地址是多少？","laf 的使用教程。","laf 有什么特点和优势。"]
+Original question: Do you know about the Model Y?
+Retrieval terms: ["What are the specifications of the Tesla Model Y?", "What features does the Tesla Model Y have?", "How does the Tesla Model Y compare to the Model 3?"]
 ----------------
-历史记录:
+History:
 """
-Q: FastGPT 的优势
-A: 1. 开源
-   2. 简便
-   3. 扩展性强
+Q: Advantages of electric vehicles
+A: 1. Environmentally friendly
+   2. Lower running costs
+   3. Quiet operation
 """
-原问题: 介绍下第2点。
-检索词: ["介绍下 FastGPT 简便的优势", "从哪些方面，可以体现出 FastGPT 的简便"]。
+Original question: Explain the first advantage.
+Retrieval terms: ["Explain how electric vehicles are environmentally friendly", "In what ways are electric vehicles better for the environment?"]
 ----------------
-历史记录:
+History:
 """
-Q: 什么是 FastGPT？
-A: FastGPT 是一个 RAG 平台。
-Q: 什么是 Laf？
-A: Laf 是一个云函数开发平台。
+Q: What is a hybrid car?
+A: A hybrid car uses both an internal combustion engine and an electric motor.
+Q: What is an all-electric car?
+A: An all-electric car runs solely on electric power.
 """
-原问题: 它们有什么关系？
-检索词: ["FastGPT和Laf有什么关系？","介绍下FastGPT","介绍下Laf"]
+Original question: What is the difference between them?
+Retrieval terms: ["What is the difference between hybrid and all-electric cars?", "Describe the differences between hybrid and electric vehicles.", "What are the pros and cons of hybrid vs. electric cars?"]
 ----------------
-历史记录:
+History:
 """
 {{histories}}
 """
-原问题: {{query}}
-检索词: `;
+Original question: {{query}}
+Retrieval terms: `;
+
+const defaultSchoolPrompt = `As a vector retrieval assistant, your task is to generate different versions of "retrieval terms" for the "original question" from different perspectives, combining historical records to improve the semantic richness and precision of vector retrieval. The generated questions must be clear and specific to the subject, and use the same language as the "original question". For example:
+History:
+"""
+"""
+Original question: Tell me about the IT support office.
+Retrieval terms: ["Describe the services provided by the IT support office.", "What are the working hours of the IT office?", "How do I contact the university's IT support?"]
+History:
+"""
+Q: Dialogue background.
+A: The current dialogue is about university dormitory assignments and housing policies.
+"""
+Original question: How do I apply for a dorm?
+Retrieval terms: ["How do I apply for a dorm at the university?", "What is the dorm application process?", "Where can I submit my dormitory application?"]
+History:
+"""
+Q: Dialogue background.
+A: The current dialogue is about university meal plans and dining services.
+Q: What are the meal plan options?
+A: The university offers several meal plan options, including unlimited access and pay-per-meal plans.
+"""
+Original question: What are the dining hall hours?
+Retrieval terms: ["What are the operating hours of the dining hall?", "When can I use my meal plan in the dining hall?", "What time does the dining hall close on weekends?"]
+History:
+"""
+Q: How do I schedule an appointment with health services?
+A: You can schedule an appointment with health services through the university's health portal or by calling their office.
+"""
+Original question: What services do they offer?
+Retrieval terms: ["What services are provided by the university's health center?", "Does the health center offer mental health support?", "What types of medical care are available at the health services?"]
+History:
+"""
+Q: Who is eligible for student insurance?
+A: All full-time students are eligible for the university's health insurance plan.
+"""
+Original question: Tell me more about the insurance plan.
+Retrieval terms: ["What are the details of the student health insurance plan?", "What coverage is included in the university's insurance?", "How do I enroll in the student health insurance plan?"]
+History:
+"""
+Q: Dialogue background.
+A: Introduction and usage questions about campus IT services and student portal access.
+"""
+Original question: Hi there.
+Retrieval terms: ["Hi there"]
+History:
+"""
+Q: How do I reset my campus portal password?
+A: You can reset your campus portal password by visiting the IT office's password reset page or contacting support.
+"""
+Original question: Do you know how to submit an IT request?
+Retrieval terms: ["How do I submit a support request to the IT office?", "What is the process for requesting IT support?", "Where can I report IT issues on campus?"]
+History:
+"""
+Q: What are the benefits of living on-campus?
+A: 1. Proximity to classes and campus services
+2. Access to campus events and community activities
+3. Convenient dining options
+"""
+Original question: Explain the first benefit.
+Retrieval terms: ["Explain how living on-campus provides proximity to classes.", "How is living on-campus more convenient for attending classes?", "What are the advantages of being close to campus services when living on-campus?"]
+History:
+"""
+Q: What is a commuter student?
+A: A commuter student is someone who lives off-campus and travels to the university for classes.
+Q: What is an on-campus resident?
+A: An on-campus resident lives in university-provided housing, such as dormitories or student apartments.
+"""
+Original question: What is the difference between them?
+Retrieval terms: ["What is the difference between a commuter student and an on-campus resident?", "Describe the differences between commuting and living on-campus.", "What are the pros and cons of living on-campus vs. commuting?"]
+History:
+"""
+{{histories}}
+"""
+Original question: {{query}}
+Retrieval terms:`;
 
 export const queryExtension = async ({
   chatBg,
@@ -127,10 +202,11 @@ A: ${chatBg}
     timeout: 480000
   });
 
+  /* change the prompt for different applications */
   const messages = [
     {
       role: 'user',
-      content: replaceVariable(defaultPrompt, {
+      content: replaceVariable(defaultSchoolPrompt, {
         query: `${query}`,
         histories: concatFewShot
       })

@@ -1,0 +1,15 @@
+pnpm --prefix ./projects/app dev
+
+> app@4.8.8 dev /home/ubuntu/FastGPT/projects/app
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+  ▲ Next.js 14.2.5
+  - Local:        http://localhost:3001
+  - Environments: .env.local
+  - Experiments (use with caution):
+    · outputFileTracingRoot
+
+ ✓ Starting...
+ ✓ Ready in 3.2s
+make: *** [Makefile:16: dev] Hangup
