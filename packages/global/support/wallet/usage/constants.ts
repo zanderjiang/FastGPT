@@ -1,21 +1,47 @@
+import { i18nT } from '../../../../web/i18n/utils';
+
 export enum UsageSourceEnum {
   fastgpt = 'fastgpt',
   api = 'api',
   shareLink = 'shareLink',
-  training = 'training'
+  training = 'training',
+  cronJob = 'cronJob',
+  share = 'share',
+  wecom = 'wecom',
+  feishu = 'feishu',
+  dingtalk = 'dingtalk',
+  official_account = 'official_account'
 }
 
 export const UsageSourceMap = {
   [UsageSourceEnum.fastgpt]: {
-    label: '在线使用'
+    label: i18nT('common:core.chat.logs.online')
   },
   [UsageSourceEnum.api]: {
-    label: 'Api'
+    label: 'API'
   },
   [UsageSourceEnum.shareLink]: {
-    label: '免登录链接'
+    label: i18nT('common:core.chat.logs.free_login')
   },
   [UsageSourceEnum.training]: {
-    label: 'dataset.Training Name'
+    label: i18nT('common:dataset.Training Name')
+  },
+  [UsageSourceEnum.cronJob]: {
+    label: i18nT('common:cron_job_run_app')
+  },
+  [UsageSourceEnum.feishu]: {
+    label: i18nT('account_usage:feishu')
+  },
+  [UsageSourceEnum.official_account]: {
+    label: i18nT('account_usage:official_account')
+  },
+  [UsageSourceEnum.share]: {
+    label: i18nT('account_usage:share')
+  },
+  [UsageSourceEnum.wecom]: {
+    label: i18nT('account_usage:wecom')
+  },
+  [UsageSourceEnum.dingtalk]: {
+    label: i18nT('account_usage:dingtalk')
   }
 };

@@ -1,12 +1,12 @@
 import MyModal from '@fastgpt/web/components/common/MyModal';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'next-i18next';
-import { Box, ModalBody, ModalFooter } from '@chakra-ui/react';
-import { useQuery } from '@tanstack/react-query';
+import { Box, ModalBody } from '@chakra-ui/react';
 import { checkBalancePayResult } from '@/web/support/wallet/bill/api';
 import { useToast } from '@fastgpt/web/hooks/useToast';
-import { useRouter } from 'next/router';
-import { getErrText } from '@fastgpt/global/common/error/utils';
+import LightTip from '@fastgpt/web/components/common/LightTip';
+import QRCode from 'qrcode';
+import { useRequest2 } from '@fastgpt/web/hooks/useRequest';
 
 export type QRPayProps = {
   readPrice: number;
@@ -14,69 +14,66 @@ export type QRPayProps = {
   billId: string;
 };
 
+const qrCodeSize = 168;
+
 const QRCodePayModal = ({
+  tip,
   readPrice,
   codeUrl,
   billId,
   onSuccess
-}: QRPayProps & { onSuccess?: () => any }) => {
-  const router = useRouter();
+}: QRPayProps & { tip?: string; onSuccess?: () => any }) => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const dom = document.getElementById('payQRCode');
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const drawCode = useCallback(() => {
+    const canvas = document.createElement('canvas');
+    QRCode.toCanvas(canvas, codeUrl, {
+      width: qrCodeSize,
+      margin: 0,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    })
+      .then(() => {
+        if (canvasRef.current) {
+          canvasRef.current.innerHTML = '';
+          canvasRef.current.appendChild(canvas);
+        } else {
+          drawCode();
+        }
+      })
+      .catch((err) => {
+        console.error('QRCode generation error:', err);
+      });
+  }, [codeUrl]);
 
   useEffect(() => {
-    if (dom && window.QRCode) {
-      new window.QRCode(dom, {
-        text: codeUrl,
-        width: 128,
-        height: 128,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H
-      });
-    }
-  }, [dom]);
+    drawCode();
+  }, [drawCode]);
 
-  useQuery(
-    [billId],
-    () => {
-      if (!billId) return null;
-      return checkBalancePayResult(billId);
-    },
-    {
-      enabled: !!billId,
-      refetchInterval: 3000,
-      onSuccess: async (res) => {
-        if (!res) return;
-
-        try {
-          await onSuccess?.();
-          toast({
-            title: res,
-            status: 'success'
-          });
-        } catch (error) {
-          toast({
-            title: getErrText(error),
-            status: 'error'
-          });
-        }
-
-        setTimeout(() => {
-          router.reload();
-        }, 1000);
+  useRequest2(() => checkBalancePayResult(billId), {
+    manual: false,
+    pollingInterval: 2000,
+    onSuccess: (res) => {
+      if (res) {
+        onSuccess?.();
       }
-    }
-  );
+    },
+    errorToast: ''
+  });
 
   return (
     <MyModal isOpen title={t('common:user.Pay')} iconSrc="/imgs/modal/pay.svg">
-      <ModalBody textAlign={'center'}>
-        <Box mb={3}>请微信扫码支付: {readPrice}元，请勿关闭页面</Box>
-        <Box id={'payQRCode'} display={'inline-block'} h={'128px'}></Box>
+      <ModalBody textAlign={'center'} pb={10} whiteSpace={'pre-wrap'}>
+        {tip && <LightTip text={tip} mb={8} textAlign={'left'} />}
+        <Box ref={canvasRef} display={'inline-block'} h={`${qrCodeSize}px`}></Box>
+        <Box mt={5} textAlign={'center'}>
+          {t('common:pay.wechat', { price: readPrice })}
+        </Box>
       </ModalBody>
-      <ModalFooter />
     </MyModal>
   );
 };

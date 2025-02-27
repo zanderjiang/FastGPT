@@ -19,7 +19,7 @@ const colorMap: Record<
   }
 > = {
   white: {
-    borderColor: 'myGray.400',
+    borderColor: 'myGray.200',
     bg: 'white',
     color: 'myGray.700'
   },
@@ -66,7 +66,7 @@ const MyTag = ({ children, colorSchema = 'blue', type = 'fill', showDot, ...prop
   }, [colorSchema]);
 
   return (
-    <Box
+    <Flex
       display={'inline-flex'}
       px={2.5}
       lineHeight={1}
@@ -83,7 +83,7 @@ const MyTag = ({ children, colorSchema = 'blue', type = 'fill', showDot, ...prop
     >
       {showDot && <Box w={1.5} h={1.5} borderRadius={'md'} bg={theme.color} mr={1.5}></Box>}
       {children}
-    </Box>
+    </Flex>
   );
 };
 

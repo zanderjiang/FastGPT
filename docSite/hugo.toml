@@ -1,4 +1,4 @@
-baseURL = "https://doc.fastgpt.in"
+baseURL = "https://doc.tryfastgpt.ai"
 languageCode = "en-GB"
 contentDir = "content"
 enableEmoji = true
@@ -69,6 +69,7 @@ defaultContentLanguageInSubdir = false
         # twitter = ""       # YOUR_TWITTER_ID
         # instagram = "colinwilson"     # YOUR_INSTAGRAM_ID
         # rss = true                    # show rss icon with link
+        lark = "https://oss.laf.run/otnvvf-imgs/fastgpt-feishu1.png"
         wechat = "https://oss.laf.run/htr4n1-images/fastgpt-qr-code.jpg"
 
     [params.docs] # Parameters for the /docs 'template'
@@ -113,7 +114,7 @@ defaultContentLanguageInSubdir = false
         # Link behaviour
         intLinkTooltip  = true                                # Enable a tooltip for internal links that displays info about the destination? default false
         # extLinkNewTab   = false                             # Open external links in a new Tab? default true
-        logoLinkURL = "https://fastgpt.in/"                                    # Set a custom URL destination for the top header logo link.
+        logoLinkURL = "https://tryfastgpt.ai/"                                    # Set a custom URL destination for the top header logo link.
 
     [params.flexsearch] # Parameters for FlexSearch
         # enabled             = true

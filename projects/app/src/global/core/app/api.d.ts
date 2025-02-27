@@ -12,14 +12,15 @@ export type AppUpdateParams = {
   edges?: AppSchema['edges'];
   chatConfig?: AppSchema['chatConfig'];
   teamTags?: AppSchema['teamTags'];
-  defaultPermission?: AppSchema['defaultPermission'];
 };
 
 export type PostPublishAppProps = {
-  type: AppTypeEnum;
   nodes: AppSchema['modules'];
   edges: AppSchema['edges'];
   chatConfig: AppSchema['chatConfig'];
+  isPublish?: boolean;
+  versionName?: string;
+  autoSave?: boolean; // If it is automatically saved, only one copy of the entire app will be stored, overwriting the old version
 };
 
 export type PostRevertAppProps = {
@@ -28,4 +29,9 @@ export type PostRevertAppProps = {
   editNodes: AppSchema['modules'];
   editEdges: AppSchema['edges'];
   editChatConfig: AppSchema['chatConfig'];
+};
+
+export type AppChangeOwnerBody = {
+  appId: string;
+  ownerId: string;
 };

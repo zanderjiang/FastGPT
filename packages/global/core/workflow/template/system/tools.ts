@@ -16,9 +16,11 @@ import {
   Input_Template_System_Prompt,
   Input_Template_UserChatInput
 } from '../input';
-import { chatNodeSystemPromptTip } from '../tip';
+import { chatNodeSystemPromptTip, systemPromptTip } from '../tip';
 import { LLMModelTypeEnum } from '../../../ai/constants';
 import { getHandleConfig } from '../utils';
+import { i18nT } from '../../../../../web/i18n/utils';
+import { Input_Template_File_Link_Prompt } from '../input';
 
 export const ToolModule: FlowNodeTemplateType = {
   id: FlowNodeTypeEnum.tools,
@@ -27,10 +29,11 @@ export const ToolModule: FlowNodeTemplateType = {
   sourceHandle: getHandleConfig(true, true, false, true),
   targetHandle: getHandleConfig(true, true, false, true),
   avatar: 'core/workflow/template/toolCall',
-  name: '工具调用',
-  intro: '通过AI模型自动选择一个或多个功能块进行调用，也可以对插件进行调用。',
+  name: i18nT('workflow:template.tool_call'),
+  intro: i18nT('workflow:template.tool_call_intro'),
   showStatus: true,
-  version: '481',
+  courseUrl: '/docs/guide/workbench/workflow/tool/',
+  version: '4813',
   inputs: [
     {
       ...Input_Template_SettingAiModel,
@@ -40,37 +43,62 @@ export const ToolModule: FlowNodeTemplateType = {
       key: NodeInputKeyEnum.aiChatTemperature,
       renderTypeList: [FlowNodeInputTypeEnum.hidden], // Set in the pop-up window
       label: '',
-      value: 0,
-      valueType: WorkflowIOValueTypeEnum.number,
-      min: 0,
-      max: 10,
-      step: 1
+      valueType: WorkflowIOValueTypeEnum.number
     },
     {
       key: NodeInputKeyEnum.aiChatMaxToken,
       renderTypeList: [FlowNodeInputTypeEnum.hidden], // Set in the pop-up window
       label: '',
-      value: 2000,
-      valueType: WorkflowIOValueTypeEnum.number,
-      min: 100,
-      max: 4000,
-      step: 50
+      valueType: WorkflowIOValueTypeEnum.number
     },
     {
+      key: NodeInputKeyEnum.aiChatVision,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.boolean,
+      value: true
+    },
+    {
+      key: NodeInputKeyEnum.aiChatTopP,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.number
+    },
+    {
+      key: NodeInputKeyEnum.aiChatStopSign,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.string
+    },
+    {
+      key: NodeInputKeyEnum.aiChatResponseFormat,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.string
+    },
+    {
+      key: NodeInputKeyEnum.aiChatJsonSchema,
+      renderTypeList: [FlowNodeInputTypeEnum.hidden],
+      label: '',
+      valueType: WorkflowIOValueTypeEnum.string
+    },
+
+    {
       ...Input_Template_System_Prompt,
-      label: 'core.ai.Prompt',
-      description: chatNodeSystemPromptTip,
+      label: i18nT('common:core.ai.Prompt'),
+      description: systemPromptTip,
       placeholder: chatNodeSystemPromptTip
     },
     Input_Template_History,
+    Input_Template_File_Link_Prompt,
     Input_Template_UserChatInput
   ],
   outputs: [
     {
       id: NodeOutputKeyEnum.answerText,
       key: NodeOutputKeyEnum.answerText,
-      label: 'core.module.output.label.Ai response content',
-      description: 'core.module.output.description.Ai response content',
+      label: i18nT('common:core.module.output.label.Ai response content'),
+      description: i18nT('common:core.module.output.description.Ai response content'),
       valueType: WorkflowIOValueTypeEnum.string,
       type: FlowNodeOutputTypeEnum.static
     }

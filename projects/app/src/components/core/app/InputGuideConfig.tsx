@@ -28,7 +28,7 @@ import {
   putChatInputGuide
 } from '@/web/core/chat/inputGuide/api';
 import { useQuery } from '@tanstack/react-query';
-import { useScrollPagination } from '@fastgpt/web/hooks/useScrollPagination';
+import { useVirtualScrollPagination } from '@fastgpt/web/hooks/useScrollPagination';
 import EmptyTip from '@fastgpt/web/components/common/EmptyTip';
 import { useToast } from '@fastgpt/web/hooks/useToast';
 import { useSelectFile } from '@/web/common/file/hooks/useSelectFile';
@@ -54,7 +54,7 @@ const InputGuideConfig = ({
   onChange: (e: ChatInputGuideConfigType) => void;
 }) => {
   const { t } = useTranslation();
-  const { chatT, commonT } = useI18n();
+  const { chatT } = useI18n();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
     isOpen: isOpenLexiconConfig,
@@ -87,7 +87,7 @@ const InputGuideConfig = ({
     <Flex alignItems={'center'}>
       <MyIcon name={'core/app/inputGuides'} mr={2} w={'20px'} />
       <Flex alignItems={'center'}>
-        <FormLabel>{chatT('input_guide')}</FormLabel>
+        <FormLabel color={'myGray.600'}>{chatT('input_guide')}</FormLabel>
         <ChatFunctionTip type={'inputGuide'} />
       </Flex>
       <Box flex={1} />
@@ -97,6 +97,7 @@ const InputGuideConfig = ({
           iconSpacing={1}
           size={'sm'}
           mr={'-5px'}
+          color={'myGray.600'}
           onClick={onOpen}
         >
           {formLabel}
@@ -138,20 +139,20 @@ const InputGuideConfig = ({
                     onOpenLexiconConfig();
                   }}
                 >
-                  {chatT('config_input_guide_lexicon')}
+                  {t('chat:config_input_guide_lexicon')}
                 </Button>
               </Flex>
               <>
                 <Flex mt={8} alignItems={'center'}>
                   <FormLabel>{chatT('custom_input_guide_url')}</FormLabel>
                   <Flex
-                    onClick={() => window.open(getDocPath('/docs/course/chat_input_guide'))}
+                    onClick={() => window.open(getDocPath('/docs/guide/course/chat_input_guide/'))}
                     color={'primary.700'}
                     alignItems={'center'}
                     cursor={'pointer'}
                   >
-                    <MyIcon name={'book'} ml={4} mr={1} />
-                    {commonT('common.Documents')}
+                    <MyIcon name={'book'} w={'17px'} ml={4} mr={1} color={'myGray.600'} />
+                    {t('common:common.Documents')}
                   </Flex>
                   <Box flex={'1 0 0'} />
                 </Flex>
@@ -198,15 +199,15 @@ const LexiconConfigModal = ({ appId, onClose }: { appId: string; onClose: () => 
   });
 
   const {
-    list,
+    scrollDataList,
     setData,
     ScrollList,
     isLoading: isRequesting,
     fetchData,
     scroll2Top
-  } = useScrollPagination(getChatInputGuideList, {
+  } = useVirtualScrollPagination(getChatInputGuideList, {
     refreshDeps: [searchKey],
-    debounceWait: 300,
+    // debounceWait: 300,
 
     itemHeight: 48,
     overscan: 20,
@@ -219,7 +220,7 @@ const LexiconConfigModal = ({ appId, onClose }: { appId: string; onClose: () => 
   });
 
   const { run: createNewData, loading: isCreating } = useRequest2(
-    (textList: string[]) => {
+    async (textList: string[]) => {
       if (textList.filter(Boolean).length === 0) {
         return Promise.resolve();
       }
@@ -389,7 +390,7 @@ const LexiconConfigModal = ({ appId, onClose }: { appId: string; onClose: () => 
         </Flex>
         {/* new data input */}
         {newData !== undefined && (
-          <Box mt={5} ml={list.length > 0 ? 7 : 0}>
+          <Box mt={5} ml={scrollDataList.length > 0 ? 7 : 0}>
             <MyInput
               autoFocus
               rightIcon={<MyIcon name={'save'} w={'14px'} cursor={'pointer'} />}
@@ -412,7 +413,7 @@ const LexiconConfigModal = ({ appId, onClose }: { appId: string; onClose: () => 
         fontSize={'sm'}
         EmptyChildren={<EmptyTip text={chatT('chat_input_guide_lexicon_is_empty')} />}
       >
-        {list.map((data, index) => {
+        {scrollDataList.map((data, index) => {
           const item = data.data;
 
           const selected = selectedRows.includes(item._id);
@@ -433,6 +434,7 @@ const LexiconConfigModal = ({ appId, onClose }: { appId: string; onClose: () => 
               <Checkbox
                 mr={2}
                 isChecked={selected}
+                icon={<MyIcon name={'common/check'} w={'12px'} />}
                 onChange={(e) => {
                   if (e.target.checked) {
                     setSelectedRows([...selectedRows, item._id]);

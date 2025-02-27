@@ -13,14 +13,13 @@ import {
 import { useRouter } from 'next/router';
 import React, { useCallback, useState } from 'react';
 import { createContext } from 'use-context-selector';
-import { useI18n } from '@/web/context/I18n';
 import { useRequest2 } from '@fastgpt/web/hooks/useRequest';
 import { DatasetUpdateBody } from '@fastgpt/global/core/dataset/api';
 import dynamic from 'next/dynamic';
 import { DatasetTypeEnum } from '@fastgpt/global/core/dataset/constants';
 import { DatasetItemType, DatasetListItemType } from '@fastgpt/global/core/dataset/type';
 import { EditResourceInfoFormType } from '@/components/common/Modal/EditResourceModal';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'next-i18next';
 
 const MoveModal = dynamic(() => import('@/components/common/folder/MoveModal'));
 
@@ -37,6 +36,8 @@ export type DatasetContextType = {
   setEditedDataset: (data?: EditResourceInfoFormType) => void;
   onDelDataset: (id: string) => Promise<void>;
   onUpdateDataset: (data: DatasetUpdateBody) => Promise<void>;
+  searchKey: string;
+  setSearchKey: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export const DatasetsContext = createContext<DatasetContextType>({
@@ -57,15 +58,18 @@ export const DatasetsContext = createContext<DatasetContextType>({
   onUpdateDataset: function (_data: DatasetUpdateBody): Promise<void> {
     throw new Error('Function not implemented.');
   },
-  myDatasets: []
+  myDatasets: [],
+  searchKey: '',
+  setSearchKey: function (value: React.SetStateAction<string>): void {
+    throw new Error('Function not implemented.');
+  }
 });
 
 function DatasetContextProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { commonT } = useI18n();
   const { t } = useTranslation();
   const [moveDatasetId, setMoveDatasetId] = useState<string>();
-
+  const [searchKey, setSearchKey] = useState('');
   const { parentId = null } = router.query as { parentId?: string | null };
 
   const {
@@ -75,11 +79,12 @@ function DatasetContextProvider({ children }: { children: React.ReactNode }) {
   } = useRequest2(
     () =>
       getDatasets({
+        searchKey,
         parentId
       }),
     {
       manual: false,
-      refreshDeps: [parentId]
+      refreshDeps: [parentId, searchKey]
     }
   );
 
@@ -120,10 +125,12 @@ function DatasetContextProvider({ children }: { children: React.ReactNode }) {
         parentId,
         type: DatasetTypeEnum.folder
       })
-    ).map((item) => ({
-      id: item._id,
-      name: item.name
-    }));
+    )
+      .filter((item) => item.permission.hasManagePer)
+      .map((item) => ({
+        id: item._id,
+        name: item.name
+      }));
   }, []);
 
   const [editedDataset, setEditedDataset] = useState<EditResourceInfoFormType>();
@@ -145,7 +152,9 @@ function DatasetContextProvider({ children }: { children: React.ReactNode }) {
     onDelDataset,
     onUpdateDataset,
     myDatasets,
-    loadMyDatasets
+    loadMyDatasets,
+    searchKey,
+    setSearchKey
   };
 
   return (
@@ -155,9 +164,10 @@ function DatasetContextProvider({ children }: { children: React.ReactNode }) {
         <MoveModal
           moveResourceId={moveDatasetId}
           server={getDatasetFolderList}
-          title={commonT('Move')}
+          title={t('common:Move')}
           onClose={() => setMoveDatasetId(undefined)}
-          onConfirm={onMoveDataset}
+          onConfirm={(parentId) => onMoveDataset(parentId)}
+          moveHint={t('dataset:move.hint')}
         />
       )}
     </DatasetsContext.Provider>

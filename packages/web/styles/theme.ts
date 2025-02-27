@@ -25,7 +25,7 @@ const { definePartsStyle: tablePart, defineMultiStyleConfig: tableMultiStyle } =
 const { definePartsStyle: radioParts, defineMultiStyleConfig: radioStyle } =
   createMultiStyleConfigHelpers(radioAnatomy.keys);
 
-const shadowLight = '0px 0px 0px 2.4px rgba(51, 112, 255, 0.15)';
+export const shadowLight = '0px 0px 0px 2.4px rgba(51, 112, 255, 0.15)';
 
 // 按键
 const Button = defineStyleConfig({
@@ -34,6 +34,7 @@ const Button = defineStyleConfig({
       transform: 'scale(0.98)'
     },
     _disabled: {
+      transform: 'none !important',
       _hover: {
         filter: 'none'
       }
@@ -45,7 +46,8 @@ const Button = defineStyleConfig({
       px: '2',
       py: '0',
       h: '24px',
-      fontWeight: 'normal',
+      minH: '24px',
+      fontWeight: 'medium',
       borderRadius: 'sm'
     },
     xsSquare: {
@@ -53,24 +55,27 @@ const Button = defineStyleConfig({
       px: '0',
       py: '0',
       h: '24px',
+      minH: '24px',
       w: '24px',
-      fontWeight: 'normal',
+      fontWeight: 'medium',
       borderRadius: 'sm'
     },
     sm: {
       fontSize: 'sm',
       px: '3',
       py: 0,
-      fontWeight: 'normal',
+      fontWeight: 'medium',
       h: '30px',
+      minH: '30px',
       borderRadius: 'sm'
     },
     smSquare: {
       fontSize: 'sm',
       px: '0',
       py: 0,
-      fontWeight: 'normal',
+      fontWeight: 'medium',
       h: '30px',
+      minH: '30px',
       w: '30px',
       borderRadius: 'sm'
     },
@@ -79,34 +84,38 @@ const Button = defineStyleConfig({
       px: '4',
       py: 0,
       h: '34px',
-      fontWeight: 'normal',
-      borderRadius: 'md'
+      minH: '34px',
+      fontWeight: 'medium',
+      borderRadius: 'sm'
     },
     mdSquare: {
       fontSize: 'sm',
       px: '0',
       py: 0,
       h: '34px',
+      minH: '34px',
       w: '34px',
-      fontWeight: 'normal',
-      borderRadius: 'md'
+      fontWeight: 'medium',
+      borderRadius: 'sm'
     },
     lg: {
       fontSize: 'md',
       px: '4',
       py: 0,
       h: '40px',
-      fontWeight: 'normal',
-      borderRadius: 'lg'
+      minH: '40px',
+      fontWeight: 'medium',
+      borderRadius: 'md'
     },
     lgSquare: {
       fontSize: 'md',
       px: '0',
       py: 0,
       h: '40px',
+      minH: '40px',
       w: '40px',
-      fontWeight: 'normal',
-      borderRadius: 'lg'
+      fontWeight: 'medium',
+      borderRadius: 'md'
     }
   },
   variants: {
@@ -174,6 +183,16 @@ const Button = defineStyleConfig({
         color: 'myGray.600 !important'
       }
     },
+    whitePrimaryOutline: {
+      border: '1px solid',
+      borderColor: 'myGray.250',
+      bg: 'white',
+      transition: 'background 0.1s',
+      _hover: {
+        color: 'primary.600',
+        borderColor: 'primary.300'
+      }
+    },
     whitePrimary: {
       color: 'myGray.600',
       border: '1px solid',
@@ -181,28 +200,6 @@ const Button = defineStyleConfig({
       bg: 'white',
       transition: 'background 0.1s',
       boxShadow: '0px 0px 1px 0px rgba(19, 51, 107, 0.08), 0px 1px 2px 0px rgba(19, 51, 107, 0.05)',
-      _hover: {
-        color: 'primary.600',
-        background: 'primary.1',
-        borderColor: 'primary.300'
-      },
-      _active: {
-        color: 'primary.600'
-      },
-      _disabled: {
-        color: 'myGray.600 !important'
-      }
-    },
-    whiteFlow: {
-      color: 'myGray.600',
-      border: '1px solid',
-      borderColor: 'myGray.200',
-      height: '40px',
-      bg: 'white',
-      px: '12px',
-      py: '0',
-      borderRadius: '6px',
-      transition: 'background 0.1s',
       _hover: {
         color: 'primary.600',
         background: 'primary.1',
@@ -224,7 +221,6 @@ const Button = defineStyleConfig({
       boxShadow: '0px 0px 1px 0px rgba(19, 51, 107, 0.08), 0px 1px 2px 0px rgba(19, 51, 107, 0.05)',
       _hover: {
         color: 'red.600',
-        background: 'red.1',
         borderColor: 'red.300'
       },
       _active: {
@@ -244,7 +240,7 @@ const Button = defineStyleConfig({
     },
     grayDanger: {
       bg: 'myGray.150',
-      color: 'myGray.900',
+      color: 'myGray.600',
       _hover: {
         color: 'red.600',
         background: 'red.1',
@@ -252,6 +248,16 @@ const Button = defineStyleConfig({
       },
       _active: {
         color: 'red.600'
+      }
+    },
+    grayGhost: {
+      color: 'myGray.500',
+      fontWeight: '500',
+      p: 0,
+      bg: 'transparent',
+      transition: 'background 0.1s',
+      _hover: {
+        bg: 'myGray.05'
       }
     },
     transparentBase: {
@@ -309,12 +315,18 @@ const Input: ComponentStyleConfig = {
     sm: defineStyle({
       field: {
         h: '32px',
-        borderRadius: 'md'
+        borderRadius: 'sm'
       }
     }),
     md: defineStyle({
       field: {
-        h: '34px',
+        h: '36px',
+        borderRadius: 'sm'
+      }
+    }),
+    lg: defineStyle({
+      field: {
+        h: '40px',
         borderRadius: 'md'
       }
     })
@@ -324,10 +336,14 @@ const Input: ComponentStyleConfig = {
       field: {
         border: '1px solid',
         borderColor: 'borderColor.low',
+        px: 3,
         _focus: {
           borderColor: 'primary.500',
           boxShadow: shadowLight,
           bg: 'white'
+        },
+        _hover: {
+          borderColor: 'primary.300'
         },
         _disabled: {
           color: 'myGray.400',
@@ -347,14 +363,14 @@ const NumberInput = numInputMultiStyle({
     sm: defineStyle({
       field: {
         h: '32px',
-        borderRadius: 'md',
+        borderRadius: 'sm',
         fontsize: 'sm'
       }
     }),
-    md: defineStyle({
+    lg: defineStyle({
       field: {
         h: '40px',
-        borderRadius: 'md',
+        borderRadius: 'sm',
         fontsize: 'sm'
       }
     })
@@ -368,7 +384,7 @@ const NumberInput = numInputMultiStyle({
         _focus: {
           borderColor: 'primary.500 !important',
           boxShadow: `${shadowLight} !important`,
-          bg: 'transparent'
+          bg: 'white'
         },
         _disabled: {
           color: 'myGray.400 !important',
@@ -377,10 +393,12 @@ const NumberInput = numInputMultiStyle({
       },
       stepper: {
         bg: 'transparent',
-        border: 'none',
         color: 'myGray.600',
         _active: {
           color: 'primary.500'
+        },
+        _hover: {
+          bg: 'myGray.100'
         }
       }
     })
@@ -394,16 +412,24 @@ const Textarea: ComponentStyleConfig = {
   variants: {
     outline: {
       border: '1px solid',
+      px: 3,
       borderRadius: 'md',
       borderColor: 'myGray.200',
       fontSize: 'sm',
       _hover: {
-        borderColor: ''
+        borderColor: 'primary.300'
       },
       _focus: {
         borderColor: 'primary.500',
         boxShadow: shadowLight,
         bg: 'white'
+      },
+      '&::-webkit-resizer': {
+        background: "url('/icon/resizer.svg') no-repeat",
+        backgroundSize: '11px',
+        backgroundPosition: 'right bottom',
+        backgroundPositionX: 'right 12px',
+        backgroundPositionY: 'bottom 12px'
       }
     }
   },
@@ -468,7 +494,10 @@ const Radio = radioStyle({
 const Checkbox = checkBoxMultiStyle({
   baseStyle: checkBoxPart({
     label: {
-      fontFamily: 'mono' // change the font family of the label
+      fontFamily: 'mono', // change the font family of the label
+      _disabled: {
+        outline: 'none'
+      }
     },
     control: {
       borderRadius: 'xs',
@@ -476,10 +505,17 @@ const Checkbox = checkBoxMultiStyle({
       _checked: {
         bg: 'primary.50',
         borderColor: 'primary.600',
+        borderWidth: '1px',
         color: 'primary.600',
         boxShadow: `${shadowLight} !important`,
         _hover: {
           bg: 'primary.50'
+        },
+        _disabled: {
+          bg: 'myGray.100',
+          borderColor: 'transparent',
+          color: 'myGray.400',
+          outline: 'none'
         }
       },
       _hover: {
@@ -490,15 +526,29 @@ const Checkbox = checkBoxMultiStyle({
 });
 
 const Modal = modalMultiStyle({
-  baseStyle: modalPart({
-    body: {
-      py: 4,
-      px: 7
-    },
-    footer: {
-      pt: 2
-    }
-  })
+  sizes: {
+    md: modalPart({
+      body: {
+        py: 4,
+        px: 7
+      },
+      footer: {
+        pt: 2
+      }
+    }),
+    lg: modalPart({
+      body: {
+        pt: 8,
+        pb: 6,
+        px: '3.25rem'
+      },
+      footer: {
+        pb: 8,
+        px: '3.25rem',
+        pt: 0
+      }
+    })
+  }
 });
 
 const Table = tableMultiStyle({
@@ -537,6 +587,43 @@ const Table = tableMultiStyle({
         }
       }
     })
+  },
+  variants: {
+    workflow: {
+      table: {
+        bg: 'white'
+      },
+      thead: {
+        tr: {
+          th: {
+            p: '0',
+            px: 4,
+            bg: 'myGray.50',
+            borderRadius: 'none !important',
+            borderBottom: 'none',
+            height: '32px',
+            fontSize: 'mini',
+            fontWeight: 'medium'
+          }
+        }
+      },
+      tbody: {
+        tr: {
+          td: {
+            p: '0',
+            px: 4,
+            fontSize: 'xs',
+            borderBottom: 'base',
+            height: '40px'
+          },
+          '&:last-child': {
+            td: {
+              borderBottom: 'none'
+            }
+          }
+        }
+      }
+    }
   },
   defaultProps: {
     size: 'md'
@@ -678,6 +765,19 @@ export const theme = extendTheme({
       800: '#93370D',
       900: '#7A2E0E'
     },
+    adora: {
+      25: '#FCFCFF',
+      50: '#F0EEFF',
+      100: '#E4E1FC',
+      200: '#D3CAFF',
+      300: '#B6A8FC',
+      400: '#9E8DFB',
+      500: '#8774EE',
+      600: '#6F5DD7',
+      700: '#5E4EBD',
+      800: '#4E4198',
+      900: '#42387D'
+    },
     borderColor: {
       low: '#E8EBF0',
       base: '#DFE2EA',
@@ -708,11 +808,13 @@ export const theme = extendTheme({
     lg: '1px solid #D0E0E2'
   },
   radii: {
-    xs: '4px',
-    sm: '6px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px'
+    none: '0',
+    xs: '0.25rem',
+    sm: '0.375rem',
+    md: '0.5rem',
+    semilg: '0.625rem',
+    lg: '0.75rem',
+    xl: '1rem'
   },
   shadows: {
     1: '0px 1px 2px 0px rgba(19, 51, 107, 0.05), 0px 0px 1px 0px rgba(19, 51, 107, 0.08)',

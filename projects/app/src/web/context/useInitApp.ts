@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { clientInitData } from '@/web/common/system/staticData';
-import { useTranslation } from 'next-i18next';
 import { useRouter } from 'next/router';
 import { useSystemStore } from '@/web/common/system/useSystemStore';
 import type { FastGPTFeConfigsType } from '@fastgpt/global/common/system/types/index.d';
-import { change2DefaultLng, setLngStore } from '@/web/common/utils/i18n';
 import { useMemoizedFn, useMount } from 'ahooks';
 import { TrackEventName } from '../common/system/constants';
+import { useRequest2 } from '@fastgpt/web/hooks/useRequest';
+import { useUserStore } from '../support/user/useUserStore';
 
 export const useInitApp = () => {
   const router = useRouter();
-  const { hiId } = router.query as { hiId?: string };
-  const { i18n } = useTranslation();
+  const { hiId, bd_vid, k, sourceDomain } = router.query as {
+    hiId?: string;
+    bd_vid?: string;
+    k?: string;
+    sourceDomain?: string;
+  };
   const { loadGitStar, setInitd, feConfigs } = useSystemStore();
+  const { userInfo } = useUserStore();
   const [scripts, setScripts] = useState<FastGPTFeConfigsType['scripts']>([]);
   const [title, setTitle] = useState(process.env.SYSTEM_NAME || 'AI');
 
@@ -38,19 +43,7 @@ export const useInitApp = () => {
     setInitd();
   });
 
-  const initUserLanguage = useMemoizedFn(() => {
-    // get default language
-    const targetLng = change2DefaultLng(i18n.language);
-    if (targetLng) {
-      setLngStore(targetLng);
-      router.replace(router.asPath, undefined, { locale: targetLng });
-    }
-  });
-
   useMount(() => {
-    initFetch();
-    initUserLanguage();
-
     const errorTrack = (event: ErrorEvent) => {
       window.umami?.track(TrackEventName.windowError, {
         device: {
@@ -70,9 +63,26 @@ export const useInitApp = () => {
     };
   });
 
+  useRequest2(initFetch, {
+    refreshDeps: [userInfo?.username],
+    manual: false,
+    pollingInterval: 300000 // 5 minutes refresh
+  });
+
   useEffect(() => {
     hiId && localStorage.setItem('inviterId', hiId);
-  }, [hiId]);
+    bd_vid && sessionStorage.setItem('bd_vid', bd_vid);
+    k && sessionStorage.setItem('fastgpt_sem', JSON.stringify({ keyword: k }));
+
+    const formatSourceDomain = (() => {
+      if (sourceDomain) return sourceDomain;
+      return document.referrer;
+    })();
+
+    if (formatSourceDomain && !sessionStorage.getItem('sourceDomain')) {
+      sessionStorage.setItem('sourceDomain', formatSourceDomain);
+    }
+  }, [bd_vid, hiId, k, sourceDomain]);
 
   return {
     feConfigs,

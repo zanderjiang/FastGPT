@@ -1,5 +1,5 @@
-import { useI18n } from '@/web/context/I18n';
-import { Box, Flex, Image } from '@chakra-ui/react';
+import { Box, Flex } from '@chakra-ui/react';
+import MyImage from '@fastgpt/web/components/common/Image/MyImage';
 import QuestionTip from '@fastgpt/web/components/common/MyTooltip/QuestionTip';
 import { useTranslation } from 'next-i18next';
 import React, { useRef } from 'react';
@@ -9,24 +9,27 @@ enum FnTypeEnum {
   nextQuestion = 'nextQuestion',
   tts = 'tts',
   variable = 'variable',
-  welcome = 'welcome'
+  welcome = 'welcome',
+  file = 'file',
+  visionModel = 'visionModel',
+  instruction = 'instruction',
+  autoExec = 'autoExec'
 }
 
 const ChatFunctionTip = ({ type }: { type: `${FnTypeEnum}` }) => {
   const { t } = useTranslation();
-  const { chatT } = useI18n();
 
   const map = useRef({
     [FnTypeEnum.inputGuide]: {
       icon: '/imgs/app/inputGuide-icon.svg',
-      title: chatT('input_guide'),
-      desc: chatT('input_guide_tip'),
+      title: t('chat:input_guide'),
+      desc: t('chat:input_guide_tip'),
       imgUrl: '/imgs/app/inputGuide.svg'
     },
     [FnTypeEnum.nextQuestion]: {
       icon: '/imgs/app/nextQuestion-icon.svg',
       title: t('common:core.app.Question Guide'),
-      desc: t('common:core.app.Question Guide Tip'),
+      desc: t('app:question_guide_tip'),
       imgUrl: '/imgs/app/nextQuestion.svg'
     },
     [FnTypeEnum.tts]: {
@@ -46,6 +49,30 @@ const ChatFunctionTip = ({ type }: { type: `${FnTypeEnum}` }) => {
       title: t('common:core.app.Welcome Text'),
       desc: t('common:core.app.tip.welcomeTextTip'),
       imgUrl: '/imgs/app/welcome.svg'
+    },
+    [FnTypeEnum.file]: {
+      icon: '/imgs/app/fileinput.svg',
+      title: t('app:file_upload'),
+      desc: t('app:file_upload_tip'),
+      imgUrl: '/imgs/app/fileUploadPlaceholder.png'
+    },
+    [FnTypeEnum.visionModel]: {
+      icon: '/imgs/app/question.svg',
+      title: t('app:vision_model_title'),
+      desc: t('app:open_vision_function_tip'),
+      imgUrl: '/imgs/app/visionModel.svg'
+    },
+    [FnTypeEnum.instruction]: {
+      icon: '/imgs/app/help.svg',
+      title: t('workflow:plugin.Instructions'),
+      desc: t('workflow:plugin.Instruction_Tip'),
+      imgUrl: '/imgs/app/instruction.svg'
+    },
+    [FnTypeEnum.autoExec]: {
+      icon: '/imgs/app/autoExec-icon.svg',
+      title: t('common:core.app.Auto execute'),
+      desc: t('app:auto_execute_tip'),
+      imgUrl: '/imgs/app/autoExec.svg'
     }
   });
   const data = map.current[type];
@@ -55,9 +82,9 @@ const ChatFunctionTip = ({ type }: { type: `${FnTypeEnum}` }) => {
       maxW={'420px'}
       ml={1}
       label={
-        <Box>
-          <Flex>
-            <Image src={data.icon} w={'36px'} alt={''} />
+        <Box pt={2}>
+          <Flex alignItems={'flex-start'}>
+            <MyImage src={data.icon} w={'36px'} alt={''} />
             <Box ml={3}>
               <Box fontWeight="bold">{data.title}</Box>
               <Box fontSize={'xs'} color={'myGray.500'}>
@@ -65,7 +92,7 @@ const ChatFunctionTip = ({ type }: { type: `${FnTypeEnum}` }) => {
               </Box>
             </Box>
           </Flex>
-          <Image src={data.imgUrl} w={'100%'} minH={['auto', '250px']} mt={2} alt={''} />
+          <MyImage src={data.imgUrl} w={'100%'} minH={['auto', '250px']} mt={2} alt={''} />
         </Box>
       }
     />

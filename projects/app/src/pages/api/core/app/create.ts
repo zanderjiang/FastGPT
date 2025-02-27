@@ -14,6 +14,9 @@ import { defaultNodeVersion } from '@fastgpt/global/core/workflow/node/constant'
 import { ClientSession } from '@fastgpt/service/common/mongo';
 import { authApp } from '@fastgpt/service/support/permission/app/auth';
 import { CommonErrEnum } from '@fastgpt/global/common/error/code/common';
+import { MongoTeamMember } from '@fastgpt/service/support/user/team/teamMemberSchema';
+import { pushTrack } from '@fastgpt/service/common/middle/tracks/utils';
+import { refreshSourceAvatar } from '@fastgpt/service/common/file/image/controller';
 
 export type CreateAppBody = {
   parentId?: ParentIdType;
@@ -22,25 +25,29 @@ export type CreateAppBody = {
   type?: AppTypeEnum;
   modules: AppSchema['modules'];
   edges?: AppSchema['edges'];
+  chatConfig?: AppSchema['chatConfig'];
 };
 
 async function handler(req: ApiRequestProps<CreateAppBody>) {
-  const { parentId, name, avatar, type, modules, edges } = req.body;
+  const { parentId, name, avatar, type, modules, edges, chatConfig } = req.body;
 
   if (!name || !type || !Array.isArray(modules)) {
     return Promise.reject(CommonErrEnum.inheritPermissionError);
   }
 
   // 凭证校验
-  const { teamId, tmbId } = await authUserPer({ req, authToken: true, per: WritePermissionVal });
-  if (parentId) {
-    // if it is not a root app
-    // check the parent folder permission
-    await authApp({ req, appId: parentId, per: WritePermissionVal, authToken: true });
-  }
+  const [{ teamId, tmbId, userId }] = await Promise.all([
+    authUserPer({ req, authToken: true, per: WritePermissionVal }),
+    ...(parentId
+      ? [authApp({ req, appId: parentId, per: WritePermissionVal, authToken: true })]
+      : [])
+  ]);
 
   // 上限校验
   await checkTeamAppLimit(teamId);
+  const tmb = await MongoTeamMember.findById({ _id: tmbId }, 'userId').populate<{
+    user: { avatar: string; username: string };
+  }>('user', 'avatar username');
 
   // 创建app
   const appId = await onCreateApp({
@@ -50,6 +57,16 @@ async function handler(req: ApiRequestProps<CreateAppBody>) {
     type,
     modules,
     edges,
+    chatConfig,
+    teamId,
+    tmbId,
+    userAvatar: tmb?.user?.avatar,
+    username: tmb?.user?.username
+  });
+
+  pushTrack.createApp({
+    type,
+    uid: userId,
     teamId,
     tmbId
   });
@@ -67,9 +84,12 @@ export const onCreateApp = async ({
   type,
   modules,
   edges,
+  chatConfig,
   teamId,
   tmbId,
   pluginData,
+  username,
+  userAvatar,
   session
 }: {
   parentId?: ParentIdType;
@@ -78,10 +98,13 @@ export const onCreateApp = async ({
   type?: AppTypeEnum;
   modules?: AppSchema['modules'];
   edges?: AppSchema['edges'];
+  chatConfig?: AppSchema['chatConfig'];
   intro?: string;
   teamId: string;
   tmbId: string;
   pluginData?: AppSchema['pluginData'];
+  username?: string;
+  userAvatar?: string;
   session?: ClientSession;
 }) => {
   const create = async (session: ClientSession) => {
@@ -96,10 +119,11 @@ export const onCreateApp = async ({
           tmbId,
           modules,
           edges,
+          chatConfig,
           type,
           version: 'v2',
           pluginData,
-          ...(type === AppTypeEnum.plugin && { 'pluginData.nodeVersion': defaultNodeVersion })
+          'pluginData.nodeVersion': defaultNodeVersion
         }
       ],
       { session }
@@ -109,14 +133,22 @@ export const onCreateApp = async ({
       await MongoAppVersion.create(
         [
           {
+            tmbId,
             appId,
             nodes: modules,
-            edges
+            edges,
+            chatConfig,
+            versionName: name,
+            username,
+            avatar: userAvatar,
+            isPublish: true
           }
         ],
         { session }
       );
     }
+
+    await refreshSourceAvatar(avatar, undefined, session);
 
     return appId;
   };

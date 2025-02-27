@@ -11,7 +11,7 @@ weight: 860
 
 在 FastGPT V4.6.4 中，我们修改了分享链接的数据读取方式，为每个用户生成一个 localId，用于标识用户，从云端拉取对话记录。但是这种方式仅能保障用户在同一设备同一浏览器中使用，如果切换设备或者清空浏览器缓存则会丢失这些记录。这种方式存在一定的风险，因此我们仅允许用户拉取近`30天`的`20条`记录。
 
-分享链接身份鉴权设计的目的在于，将 FastGPT 的对话框快速、安全的接入到你现有的系统中，仅需 2 个接口即可实现。
+分享链接身份鉴权设计的目的在于，将 FastGPT 的对话框快速、安全的接入到你现有的系统中，仅需 2 个接口即可实现。该功能目前只在商业版中提供。
 
 ## 使用说明
 
@@ -53,9 +53,9 @@ weight: 860
 
 在分享链接的地址中，增加一个额外的参数: authToken。例如：
 
-原始的链接：`https://share.fastgpt.in/chat/share?shareId=648aaf5ae121349a16d62192`  
+原始的链接：`https://share.tryfastgpt.ai/chat/share?shareId=648aaf5ae121349a16d62192`  
 
-完整链接: `https://share.fastgpt.in/chat/share?shareId=648aaf5ae121349a16d62192&authToken=userid12345`
+完整链接: `https://share.tryfastgpt.ai/chat/share?shareId=648aaf5ae121349a16d62192&authToken=userid12345`
 
 这个`authToken`通常是你系统生成的用户唯一凭证（Token之类的）。FastGPT 会在鉴权接口的`body`中携带 token={{authToken}} 的参数。
 
@@ -227,7 +227,7 @@ curl --location --request POST '{{host}}/shareAuth/finish' \
             "historyPreview": [
                 {
                     "obj": "Human",
-                    "value": "使用 <Data></Data> 标记中的内容作为你的知识:\n\n<Data>\n导演是谁？\n电影《铃芽之旅》的导演是新海诚。\n------\n电影《铃芽之旅》的编剧是谁？22\n新海诚是本片的编剧。\n------\n电影《铃芽之旅》的女主角是谁？\n电影的女主角是铃芽。\n------\n电影《铃芽之旅》的制作团队中有哪位著名人士？2\n川村元气是本片的制作团队成员之一。\n------\n你是谁？\n我是电影《铃芽之旅》助手\n------\n电影《铃芽之旅》男主角是谁？\n电影《铃芽之旅》男主角是宗像草太，由松村北斗配音。\n------\n电影《铃芽之旅》的作者新海诚写了一本小说，叫什么名字？\n小说名字叫《铃芽之旅》。\n------\n电影《铃芽之旅》的女主角是谁？\n电影《铃芽之旅》的女主角是岩户铃芽，由原菜乃华配音。\n------\n电影《铃芽之旅》的故事背景是什么？\n日本\n------\n谁担任电影《铃芽之旅》中岩户环的配音？\n深津绘里担任电影《铃芽之旅》中岩户环的配音。\n</Data>\n\n回答要求：\n- 如果你不清楚答案，你需要澄清。\n- 避免提及你是从 <Data></Data> 获取的知识。\n- 保持答案与 <Data></Data> 中描述的一致。\n- 使用 Markdown 语法优化回答格式。\n- 使用与问题相同的语言回答。\n\n问题:\"\"\"导演是谁\"\"\""
+                    "value": "使用 <Data></Data> 标记中的内容作为本次对话的参考:\n\n<Data>\n导演是谁？\n电影《铃芽之旅》的导演是新海诚。\n------\n电影《铃芽之旅》的编剧是谁？22\n新海诚是本片的编剧。\n------\n电影《铃芽之旅》的女主角是谁？\n电影的女主角是铃芽。\n------\n电影《铃芽之旅》的制作团队中有哪位著名人士？2\n川村元气是本片的制作团队成员之一。\n------\n你是谁？\n我是电影《铃芽之旅》助手\n------\n电影《铃芽之旅》男主角是谁？\n电影《铃芽之旅》男主角是宗像草太，由松村北斗配音。\n------\n电影《铃芽之旅》的作者新海诚写了一本小说，叫什么名字？\n小说名字叫《铃芽之旅》。\n------\n电影《铃芽之旅》的女主角是谁？\n电影《铃芽之旅》的女主角是岩户铃芽，由原菜乃华配音。\n------\n电影《铃芽之旅》的故事背景是什么？\n日本\n------\n谁担任电影《铃芽之旅》中岩户环的配音？\n深津绘里担任电影《铃芽之旅》中岩户环的配音。\n</Data>\n\n回答要求：\n- 如果你不清楚答案，你需要澄清。\n- 避免提及你是从 <Data></Data> 获取的知识。\n- 保持答案与 <Data></Data> 中描述的一致。\n- 使用 Markdown 语法优化回答格式。\n- 使用与问题相同的语言回答。\n\n问题:\"\"\"导演是谁\"\"\""
                 },
                 {
                     "obj": "AI",
@@ -387,9 +387,9 @@ export default async function (ctx: FunctionContext) {
 
 ### 3. 修改分享链接参数
 
-源分享链接：`https://share.fastgpt.in/chat/share?shareId=64be36376a438af0311e599c`
+源分享链接：`https://share.tryfastgpt.ai/chat/share?shareId=64be36376a438af0311e599c`
 
-修改后：`https://share.fastgpt.in/chat/share?shareId=64be36376a438af0311e599c&authToken=fastgpt`
+修改后：`https://share.tryfastgpt.ai/chat/share?shareId=64be36376a438af0311e599c&authToken=fastgpt`
 
 ### 4. 测试效果
 

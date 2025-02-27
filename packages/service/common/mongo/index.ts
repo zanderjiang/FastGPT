@@ -38,10 +38,12 @@ const addCommonMiddleware = (schema: mongoose.Schema) => {
     schema.post(op, function (this: any, result: any, next) {
       if (this._startTime) {
         const duration = Date.now() - this._startTime;
-
         const warnLogData = {
-          query: this._query,
-          op,
+          collectionName: this.collection?.name,
+          op: this.op,
+          ...(this._query && { query: this._query }),
+          ...(this._update && { update: this._update }),
+          ...(this._delete && { delete: this._delete }),
           duration
         };
 
@@ -63,15 +65,20 @@ export const getMongoModel = <T>(name: string, schema: mongoose.Schema) => {
 
   const model = connectionMongo.model<T>(name, schema);
 
-  if (process.env.SYNC_INDEX !== '0') {
+  // Sync index
+  syncMongoIndex(model);
+
+  return model;
+};
+
+const syncMongoIndex = async (model: Model<any>) => {
+  if (process.env.SYNC_INDEX !== '0' && process.env.NODE_ENV !== 'test') {
     try {
       model.syncIndexes({ background: true });
     } catch (error) {
       addLog.error('Create index error', error);
     }
   }
-
-  return model;
 };
 
 export const ReadPreference = connectionMongo.mongo.ReadPreference;

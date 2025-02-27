@@ -4,13 +4,17 @@ import Tag from '@fastgpt/web/components/common/Tag';
 import React from 'react';
 import { useContextSelector } from 'use-context-selector';
 import { CollaboratorContext } from './context';
+import { useTranslation } from 'next-i18next';
 
 export type PermissionTagsProp = {
-  permission: PermissionValueType;
+  permission?: PermissionValueType;
 };
 
 function PermissionTags({ permission }: PermissionTagsProp) {
   const { getPerLabelList } = useContextSelector(CollaboratorContext, (v) => v);
+  const { t } = useTranslation();
+
+  if (permission === undefined) return null;
 
   const perTagList = getPerLabelList(permission);
 
@@ -26,7 +30,7 @@ function PermissionTags({ permission }: PermissionTagsProp) {
           px={3}
           fontSize={'xs'}
         >
-          {item}
+          {t(item as any)}
         </Tag>
       ))}
     </Flex>

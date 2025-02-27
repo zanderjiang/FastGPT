@@ -1,50 +1,63 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useSystemStore } from '@/web/common/system/useSystemStore';
 import { LLMModelTypeEnum, llmModelTypeFilterMap } from '@fastgpt/global/core/ai/constants';
-import { Box, Button, Flex, css, useDisclosure } from '@chakra-ui/react';
+import { Box, css, HStack, IconButton, useDisclosure } from '@chakra-ui/react';
 import type { SettingAIDataType } from '@fastgpt/global/core/app/type.d';
-import AISettingModal from '@/components/core/ai/AISettingModal';
-import Avatar from '@fastgpt/web/components/common/Avatar';
-import { HUGGING_FACE_ICON } from '@fastgpt/global/common/system/constants';
+import AISettingModal, { AIChatSettingsModalProps } from '@/components/core/ai/AISettingModal';
 import MyTooltip from '@fastgpt/web/components/common/MyTooltip';
 import { useTranslation } from 'next-i18next';
+import MyIcon from '@fastgpt/web/components/common/Icon';
+import AIModelSelector from '@/components/Select/AIModelSelector';
+import { getWebDefaultLLMModel } from '@/web/common/system/utils';
 
 type Props = {
   llmModelType?: `${LLMModelTypeEnum}`;
   defaultData: SettingAIDataType;
   onChange: (e: SettingAIDataType) => void;
+  bg?: string;
 };
 
-const SettingLLMModel = ({ llmModelType = LLMModelTypeEnum.all, defaultData, onChange }: Props) => {
+const SettingLLMModel = ({
+  llmModelType = LLMModelTypeEnum.all,
+  defaultData,
+  onChange,
+  ...props
+}: AIChatSettingsModalProps & Props) => {
   const { t } = useTranslation();
   const { llmModelList } = useSystemStore();
 
   const model = defaultData.model;
 
-  const modelList = llmModelList.filter((model) => {
-    if (!llmModelType) return true;
-    const filterField = llmModelTypeFilterMap[llmModelType];
-    if (!filterField) return true;
-    //@ts-ignore
-    return !!model[filterField];
-  });
+  const modelList = useMemo(
+    () =>
+      llmModelList.filter((modelData) => {
+        if (!llmModelType) return true;
+        const filterField = llmModelTypeFilterMap[llmModelType];
+        if (!filterField) return true;
+        //@ts-ignore
+        return !!modelData[filterField];
+      }),
+    [llmModelList, llmModelType]
+  );
+  const defaultModel = useMemo(() => {
+    return getWebDefaultLLMModel(modelList).model;
+  }, [modelList]);
 
-  const selectedModel = modelList.find((item) => item.model === model) || modelList[0];
+  // Set default model
+  useEffect(() => {
+    if (!modelList.find((item) => item.model === model) && !!defaultModel) {
+      onChange({
+        ...defaultData,
+        model: defaultModel
+      });
+    }
+  }, [modelList, model, defaultModel, onChange]);
 
   const {
     isOpen: isOpenAIChatSetting,
     onOpen: onOpenAIChatSetting,
     onClose: onCloseAIChatSetting
   } = useDisclosure();
-
-  useEffect(() => {
-    if (!model && modelList.length > 0) {
-      onChange({
-        ...defaultData,
-        model: modelList[0].model
-      });
-    }
-  }, []);
 
   return (
     <Box
@@ -55,37 +68,44 @@ const SettingLLMModel = ({ llmModelType = LLMModelTypeEnum.all, defaultData, onC
       })}
       position={'relative'}
     >
-      <MyTooltip label={t('common:core.app.Setting ai property')}>
-        <Button
-          w={'100%'}
-          justifyContent={'flex-start'}
-          variant={'whiteFlow'}
-          _active={{
-            transform: 'none'
-          }}
-          leftIcon={
-            <Avatar
-              borderRadius={'0'}
-              src={selectedModel?.avatar || HUGGING_FACE_ICON}
-              fallbackSrc={HUGGING_FACE_ICON}
-              w={'18px'}
-            />
-          }
-          pl={4}
-          onClick={onOpenAIChatSetting}
-        >
-          {selectedModel?.name}
-        </Button>
-      </MyTooltip>
+      <HStack spacing={1}>
+        <Box flex={'1 0 0'}>
+          <AIModelSelector
+            w={'100%'}
+            value={model}
+            list={llmModelList.map((item) => ({
+              value: item.model,
+              label: item.name
+            }))}
+            onchange={(e) => {
+              onChange({
+                ...defaultData,
+                model: e
+              });
+            }}
+          />
+        </Box>
+        <MyTooltip label={t('app:config_ai_model_params')}>
+          <IconButton
+            variant={'transparentBase'}
+            icon={<MyIcon name="common/settingLight" w={'1.2rem'} />}
+            aria-label={''}
+            size={'mdSquare'}
+            onClick={onOpenAIChatSetting}
+          />
+        </MyTooltip>
+      </HStack>
       {isOpenAIChatSetting && (
         <AISettingModal
           onClose={onCloseAIChatSetting}
           onSuccess={(e) => {
+            console.log(e);
             onChange(e);
             onCloseAIChatSetting();
           }}
           defaultData={defaultData}
           llmModels={modelList}
+          {...props}
         />
       )}
     </Box>

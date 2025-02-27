@@ -2,7 +2,6 @@ import type { NextApiRequest } from 'next';
 import { DatasetTrainingCollectionName } from '@fastgpt/service/core/dataset/training/schema';
 import { Types } from '@fastgpt/service/common/mongo';
 import type { DatasetCollectionsListItemType } from '@/global/core/dataset/type.d';
-import type { GetDatasetCollectionsProps } from '@/global/core/api/datasetReq';
 import { MongoDatasetCollection } from '@fastgpt/service/core/dataset/collection/schema';
 import { DatasetCollectionTypeEnum } from '@fastgpt/global/core/dataset/constants';
 import { authDataset } from '@fastgpt/service/support/permission/dataset/auth';
@@ -10,9 +9,10 @@ import { DatasetDataCollectionName } from '@fastgpt/service/core/dataset/data/sc
 import { startTrainingQueue } from '@/service/core/dataset/training/utils';
 import { NextAPI } from '@/service/middleware/entry';
 import { ReadPermissionVal } from '@fastgpt/global/support/permission/constant';
-import { PagingData } from '@/types';
+import { readFromSecondary } from '@fastgpt/service/common/mongo/utils';
+import { collectionTagsToTagLabel } from '@fastgpt/service/core/dataset/collection/utils';
 
-async function handler(req: NextApiRequest): Promise<PagingData<DatasetCollectionsListItemType>> {
+async function handler(req: NextApiRequest) {
   let {
     pageNum = 1,
     pageSize = 10,
@@ -22,7 +22,7 @@ async function handler(req: NextApiRequest): Promise<PagingData<DatasetCollectio
     selectFolder = false,
     filterTags = [],
     simple = false
-  } = req.body as GetDatasetCollectionsProps;
+  } = req.body as any;
   searchText = searchText?.replace(/'/g, '');
   pageSize = Math.min(pageSize, 30);
 
@@ -60,12 +60,15 @@ async function handler(req: NextApiRequest): Promise<PagingData<DatasetCollectio
     trainingType: 1,
     fileId: 1,
     rawLink: 1,
-    tags: 1
+    tags: 1,
+    externalFileId: 1
   };
 
   // not count data amount
   if (simple) {
-    const collections = await MongoDatasetCollection.find(match)
+    const collections = await MongoDatasetCollection.find(match, undefined, {
+      ...readFromSecondary
+    })
       .select(selectField)
       .sort({
         updateTime: -1
@@ -78,6 +81,10 @@ async function handler(req: NextApiRequest): Promise<PagingData<DatasetCollectio
       data: await Promise.all(
         collections.map(async (item) => ({
           ...item,
+          tags: await collectionTagsToTagLabel({
+            datasetId,
+            tags: item.tags
+          }),
           dataAmount: 0,
           trainingAmount: 0,
           permission
@@ -153,12 +160,18 @@ async function handler(req: NextApiRequest): Promise<PagingData<DatasetCollectio
         }
       }
     ]),
-    MongoDatasetCollection.countDocuments(match)
+    MongoDatasetCollection.countDocuments(match, {
+      ...readFromSecondary
+    })
   ]);
 
   const data = await Promise.all(
     collections.map(async (item) => ({
       ...item,
+      tags: await collectionTagsToTagLabel({
+        datasetId,
+        tags: item.tags
+      }),
       permission
     }))
   );

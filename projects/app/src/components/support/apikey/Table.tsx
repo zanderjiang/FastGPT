@@ -24,21 +24,18 @@ import {
   putOpenApiKey
 } from '@/web/support/openapi/api';
 import type { EditApiKeyProps } from '@/global/support/openapi/api.d';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLoading } from '@fastgpt/web/hooks/useLoading';
 import dayjs from 'dayjs';
 import { AddIcon } from '@chakra-ui/icons';
-import { useCopyData } from '@/web/common/hooks/useCopyData';
+import { useCopyData } from '@fastgpt/web/hooks/useCopyData';
 import { useSystemStore } from '@/web/common/system/useSystemStore';
 import { useTranslation } from 'next-i18next';
 import MyIcon from '@fastgpt/web/components/common/Icon';
 import MyModal from '@fastgpt/web/components/common/MyModal';
 import { useForm } from 'react-hook-form';
-import { useRequest } from '@fastgpt/web/hooks/useRequest';
+import { useRequest, useRequest2 } from '@fastgpt/web/hooks/useRequest';
 import { getDocPath } from '@/web/common/system/doc';
 import MyMenu from '@fastgpt/web/components/common/MyMenu';
 import { useConfirm } from '@fastgpt/web/hooks/useConfirm';
-import { useI18n } from '@/web/context/I18n';
 import FormLabel from '@fastgpt/web/components/common/MyBox/FormLabel';
 import QuestionTip from '@fastgpt/web/components/common/MyTooltip/QuestionTip';
 import MyBox from '@fastgpt/web/components/common/MyBox';
@@ -53,22 +50,19 @@ const defaultEditData: EditProps = {
 
 const ApiKeyTable = ({ tips, appId }: { tips: string; appId?: string }) => {
   const { t } = useTranslation();
-  const { Loading } = useLoading();
   const theme = useTheme();
   const { copyData } = useCopyData();
   const { feConfigs } = useSystemStore();
-  const [baseUrl, setBaseUrl] = useState('https://fastgpt.in/api');
+  const [baseUrl, setBaseUrl] = useState('https://tryfastgpt.ai/api');
   const [editData, setEditData] = useState<EditProps>();
   const [apiKey, setApiKey] = useState('');
+
   const { ConfirmModal, openConfirm } = useConfirm({
     type: 'delete',
-    content: '确认删除该API密钥？删除后该密钥立即失效，对应的对话日志不会删除，请确认！'
+    content: t('common:delete_api')
   });
 
-  const { mutate: onclickRemove, isLoading: isDeleting } = useMutation({
-    mutationFn: async (id: string) => {
-      return delOpenApiById(id);
-    },
+  const { runAsync: onclickRemove } = useRequest2(delOpenApiById, {
     onSuccess() {
       refetch();
     }
@@ -76,17 +70,20 @@ const ApiKeyTable = ({ tips, appId }: { tips: string; appId?: string }) => {
 
   const {
     data: apiKeys = [],
-    isLoading: isGetting,
-    refetch
-  } = useQuery(['getOpenApiKeys', appId], () => getOpenApiKeys({ appId }));
+    loading: isGetting,
+    run: refetch
+  } = useRequest2(() => getOpenApiKeys({ appId }), {
+    manual: false,
+    refreshDeps: [appId]
+  });
 
   useEffect(() => {
     setBaseUrl(feConfigs?.customApiDomain || `${location.origin}/api`);
-  }, []);
+  }, [feConfigs?.customApiDomain]);
 
   return (
     <MyBox
-      isLoading={isGetting || isDeleting}
+      isLoading={isGetting}
       display={'flex'}
       flexDirection={'column'}
       h={'100%'}
@@ -253,7 +250,7 @@ const ApiKeyTable = ({ tips, appId }: { tips: string; appId?: string }) => {
       <MyModal
         isOpen={!!apiKey}
         w={['400px', '600px']}
-        iconSrc="/imgs/modal/key.svg"
+        iconSrc="keyPrimary"
         title={
           <Box>
             <Box fontWeight={'bold'}>{t('common:support.openapi.New api key')}</Box>
@@ -273,6 +270,7 @@ const ApiKeyTable = ({ tips, appId }: { tips: string; appId?: string }) => {
             wordBreak={'break-all'}
             cursor={'pointer'}
             borderRadius={'md'}
+            userSelect={'all'}
             onClick={() => copyData(apiKey)}
           >
             <Box flex={1}>{apiKey}</Box>
@@ -304,7 +302,6 @@ function EditKeyModal({
   onEdit: () => void;
 }) {
   const { t } = useTranslation();
-  const { publishT } = useI18n();
   const isEdit = useMemo(() => !!defaultData._id, [defaultData]);
   const { feConfigs } = useSystemStore();
 
@@ -318,7 +315,7 @@ function EditKeyModal({
 
   const { mutate: onclickCreate, isLoading: creating } = useRequest({
     mutationFn: async (e: EditProps) => createAOpenApiKey(e),
-    errorToast: '创建链接异常',
+    errorToast: t('workflow:create_link_error'),
     onSuccess: onCreate
   });
   const { mutate: onclickUpdate, isLoading: updating } = useRequest({
@@ -326,21 +323,21 @@ function EditKeyModal({
       //@ts-ignore
       return putOpenApiKey(e);
     },
-    errorToast: '更新链接异常',
+    errorToast: t('workflow:update_link_error'),
     onSuccess: onEdit
   });
 
   return (
     <MyModal
       isOpen={true}
-      iconSrc="/imgs/modal/key.svg"
-      title={isEdit ? publishT('edit_api_key') : publishT('create_api_key')}
+      iconSrc="keyPrimary"
+      title={isEdit ? t('publish:edit_api_key') : t('publish:create_api_key')}
     >
       <ModalBody>
         <Flex alignItems={'center'}>
           <FormLabel flex={'0 0 90px'}>{t('common:Name')}</FormLabel>
           <Input
-            placeholder={publishT('key_alias') || 'key_alias'}
+            placeholder={t('publish:key_alias') || 'key_alias'}
             maxLength={20}
             {...register('name', {
               required: t('common:common.name_is_empty') || 'name_is_empty'

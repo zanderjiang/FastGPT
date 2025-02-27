@@ -8,12 +8,39 @@ import QueryClientContext from '@/web/context/QueryClient';
 import ChakraUIContext from '@/web/context/ChakraUI';
 import I18nContextProvider from '@/web/context/I18n';
 import { useInitApp } from '@/web/context/useInitApp';
-
+import { useTranslation } from 'next-i18next';
 import '@/web/styles/reset.scss';
 import NextHead from '@/components/common/NextHead';
+import { ReactElement, useEffect } from 'react';
+import { NextPage } from 'next';
+import { getWebReqUrl } from '@fastgpt/web/common/system/utils';
+import SystemStoreContextProvider from '@fastgpt/web/context/useSystem';
 
-function App({ Component, pageProps }: AppProps) {
+type NextPageWithLayout = NextPage & {
+  setLayout?: (page: ReactElement) => JSX.Element;
+};
+type AppPropsWithLayout = AppProps & {
+  Component: NextPageWithLayout;
+};
+
+function App({ Component, pageProps }: AppPropsWithLayout) {
   const { feConfigs, scripts, title } = useInitApp();
+  const { t } = useTranslation();
+
+  // Forbid touch scale
+  useEffect(() => {
+    document.addEventListener(
+      'wheel',
+      function (e) {
+        if (e.ctrlKey && Math.abs(e.deltaY) !== 0) {
+          e.preventDefault();
+        }
+      },
+      { passive: false }
+    );
+  }, []);
+
+  const setLayout = Component.setLayout || ((page) => <>{page}</>);
 
   return (
     <>
@@ -22,20 +49,20 @@ function App({ Component, pageProps }: AppProps) {
         desc={
           feConfigs?.systemDescription ||
           process.env.SYSTEM_DESCRIPTION ||
-          `${title} 是一个大模型应用编排系统，提供开箱即用的数据处理、模型调用等能力，可以快速的构建知识库并通过 Flow 可视化进行工作流编排，实现复杂的知识库场景！`
+          `${title}${t('app:intro')}`
         }
-        icon={feConfigs?.favicon || process.env.SYSTEM_FAVICON}
+        icon={getWebReqUrl(feConfigs?.favicon || process.env.SYSTEM_FAVICON)}
       />
       {scripts?.map((item, i) => <Script key={i} strategy="lazyOnload" {...item}></Script>)}
 
       <QueryClientContext>
-        <I18nContextProvider>
-          <ChakraUIContext>
-            <Layout>
-              <Component {...pageProps} />
-            </Layout>
-          </ChakraUIContext>
-        </I18nContextProvider>
+        <SystemStoreContextProvider device={pageProps.deviceSize}>
+          <I18nContextProvider>
+            <ChakraUIContext>
+              <Layout>{setLayout(<Component {...pageProps} />)}</Layout>
+            </ChakraUIContext>
+          </I18nContextProvider>
+        </SystemStoreContextProvider>
       </QueryClientContext>
     </>
   );

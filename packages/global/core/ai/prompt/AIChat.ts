@@ -1,4 +1,5 @@
 import { PromptTemplateItem } from '../type.d';
+import { i18nT } from '../../../../web/i18n/utils';
 
 export const Prompt_QuoteTemplateList: PromptTemplateItem[] = [
   {
@@ -35,15 +36,15 @@ export const Prompt_QuoteTemplateList: PromptTemplateItem[] = [
   }
 ];
 
-export const Prompt_QuotePromptList: PromptTemplateItem[] = [
+export const Prompt_userQuotePromptList: PromptTemplateItem[] = [
   {
     title: 'Standard Template',
     desc: '',
     value: `Use the content marked by <Data></Data> as your knowledge:
 
-<Data>
+<Reference>
 {{quote}}
-</Data>
+</Reference>
 
 Response Requirements:
 - If you are unsure of the answer, you need to clarify.
@@ -76,9 +77,9 @@ Question:"""{{question}}"""`
     desc: '',
     value: `Forget your existing knowledge, and only use the content marked by <Data></Data> as your knowledge:
 
-<Data>
+<Reference>
 {{quote}}
-</Data>
+</Reference>
 
 Thought Process:
 1. Determine if the question is related to the content marked by <Data></Data>.

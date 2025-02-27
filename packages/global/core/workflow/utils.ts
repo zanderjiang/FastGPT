@@ -1,12 +1,23 @@
-import { FlowNodeInputTypeEnum, FlowNodeOutputTypeEnum, FlowNodeTypeEnum } from './node/constant';
+import {
+  chatHistoryValueDesc,
+  FlowNodeInputTypeEnum,
+  FlowNodeOutputTypeEnum,
+  FlowNodeTypeEnum
+} from './node/constant';
 import {
   WorkflowIOValueTypeEnum,
   NodeInputKeyEnum,
   VariableInputEnum,
   variableMap,
-  VARIABLE_NODE_ID
+  VARIABLE_NODE_ID,
+  NodeOutputKeyEnum
 } from './constants';
-import { FlowNodeInputItemType, FlowNodeOutputItemType, ReferenceValueProps } from './type/io.d';
+import {
+  FlowNodeInputItemType,
+  FlowNodeOutputItemType,
+  ReferenceArrayValueType,
+  ReferenceItemValueType
+} from './type/io.d';
 import { StoreNodeItemType } from './type/node';
 import type {
   VariableItemType,
@@ -14,17 +25,32 @@ import type {
   AppWhisperConfigType,
   AppScheduledTriggerConfigType,
   ChatInputGuideConfigType,
-  AppChatConfigType
+  AppChatConfigType,
+  AppAutoExecuteConfigType,
+  AppQGConfigType
 } from '../app/type';
 import { EditorVariablePickerType } from '../../../web/components/common/Textarea/PromptEditor/type';
 import {
+  defaultAutoExecuteConfig,
   defaultChatInputGuideConfig,
+  defaultQGConfig,
   defaultTTSConfig,
   defaultWhisperConfig
 } from '../app/constants';
 import { IfElseResultEnum } from './template/system/ifElse/constant';
 import { RuntimeNodeItemType } from './runtime/type';
-import { getReferenceVariableValue } from './runtime/utils';
+import {
+  Input_Template_File_Link,
+  Input_Template_History,
+  Input_Template_Stream_MODE,
+  Input_Template_UserChatInput
+} from './template/input';
+import { i18nT } from '../../../web/i18n/utils';
+import { RuntimeUserPromptType, UserChatItemType } from '../../core/chat/type';
+import { getNanoid } from '../../common/string/tools';
+import { ChatRoleEnum } from '../../core/chat/constants';
+import { runtimePrompt2ChatsValue } from '../../core/chat/adapt';
+import { getPluginRunContent } from '../../core/app/plugin/utils';
 
 export const getHandleId = (nodeId: string, type: 'source' | 'target', key: string) => {
   return `${nodeId}-${type}-${key}`;
@@ -47,30 +73,42 @@ export const getGuideModule = (modules: StoreNodeItemType[]) =>
   );
 export const splitGuideModule = (guideModules?: StoreNodeItemType) => {
   const welcomeText: string =
-    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.welcomeText)?.value || '';
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.welcomeText)?.value ?? '';
 
   const variables: VariableItemType[] =
-    guideModules?.inputs.find((item) => item.key === NodeInputKeyEnum.variables)?.value || [];
+    guideModules?.inputs.find((item) => item.key === NodeInputKeyEnum.variables)?.value ?? [];
 
-  const questionGuide: boolean =
-    !!guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.questionGuide)?.value ||
-    false;
+  // Adapt old version
+  const questionGuideVal = guideModules?.inputs?.find(
+    (item) => item.key === NodeInputKeyEnum.questionGuide
+  )?.value;
+  const questionGuide: AppQGConfigType =
+    typeof questionGuideVal === 'boolean'
+      ? { ...defaultQGConfig, open: questionGuideVal }
+      : questionGuideVal ?? defaultQGConfig;
 
   const ttsConfig: AppTTSConfigType =
-    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.tts)?.value ||
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.tts)?.value ??
     defaultTTSConfig;
 
   const whisperConfig: AppWhisperConfigType =
-    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.whisper)?.value ||
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.whisper)?.value ??
     defaultWhisperConfig;
 
-  const scheduledTriggerConfig: AppScheduledTriggerConfigType = guideModules?.inputs?.find(
-    (item) => item.key === NodeInputKeyEnum.scheduleTrigger
-  )?.value;
+  const scheduledTriggerConfig: AppScheduledTriggerConfigType =
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.scheduleTrigger)?.value ??
+    undefined;
 
   const chatInputGuide: ChatInputGuideConfigType =
-    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.chatInputGuide)?.value ||
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.chatInputGuide)?.value ??
     defaultChatInputGuideConfig;
+
+  const instruction: string =
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.instruction)?.value ?? '';
+
+  const autoExecute: AppAutoExecuteConfigType =
+    guideModules?.inputs?.find((item) => item.key === NodeInputKeyEnum.autoExecute)?.value ??
+    defaultAutoExecuteConfig;
 
   return {
     welcomeText,
@@ -79,9 +117,13 @@ export const splitGuideModule = (guideModules?: StoreNodeItemType) => {
     ttsConfig,
     whisperConfig,
     scheduledTriggerConfig,
-    chatInputGuide
+    chatInputGuide,
+    instruction,
+    autoExecute
   };
 };
+
+// Get app chat config: db > nodes
 export const getAppChatConfig = ({
   chatConfig,
   systemConfigNode,
@@ -102,7 +144,9 @@ export const getAppChatConfig = ({
     ttsConfig,
     whisperConfig,
     scheduledTriggerConfig,
-    chatInputGuide
+    chatInputGuide,
+    instruction,
+    autoExecute
   } = splitGuideModule(systemConfigNode);
 
   const config: AppChatConfigType = {
@@ -111,6 +155,8 @@ export const getAppChatConfig = ({
     whisperConfig,
     scheduledTriggerConfig,
     chatInputGuide,
+    instruction,
+    autoExecute,
     ...chatConfig,
     variables: storeVariables ?? chatConfig?.variables ?? variables,
     welcomeText: storeWelcomeText ?? chatConfig?.welcomeText ?? welcomeText
@@ -145,9 +191,11 @@ export const getModuleInputUiField = (input: FlowNodeInputItemType) => {
   return {};
 };
 
-export const pluginData2FlowNodeIO = (
-  nodes: StoreNodeItemType[]
-): {
+export const pluginData2FlowNodeIO = ({
+  nodes
+}: {
+  nodes: StoreNodeItemType[];
+}): {
   inputs: FlowNodeInputItemType[];
   outputs: FlowNodeOutputItemType[];
 } => {
@@ -156,12 +204,19 @@ export const pluginData2FlowNodeIO = (
 
   return {
     inputs: pluginInput
-      ? pluginInput.inputs.map((item) => ({
-          ...item,
-          ...getModuleInputUiField(item),
-          value: getOrInitModuleInputValue(item),
-          canEdit: false
-        }))
+      ? [
+          Input_Template_Stream_MODE,
+          ...pluginInput?.inputs.map((item) => ({
+            ...item,
+            ...getModuleInputUiField(item),
+            value: getOrInitModuleInputValue(item),
+            canEdit: false,
+            renderTypeList:
+              item.renderTypeList[0] === FlowNodeInputTypeEnum.customVariable
+                ? [FlowNodeInputTypeEnum.reference, FlowNodeInputTypeEnum.input]
+                : item.renderTypeList
+          }))
+        ]
       : [],
     outputs: pluginOutput
       ? [
@@ -178,6 +233,84 @@ export const pluginData2FlowNodeIO = (
   };
 };
 
+export const appData2FlowNodeIO = ({
+  chatConfig
+}: {
+  chatConfig?: AppChatConfigType;
+}): {
+  inputs: FlowNodeInputItemType[];
+  outputs: FlowNodeOutputItemType[];
+} => {
+  const variableInput = !chatConfig?.variables
+    ? []
+    : chatConfig.variables.map((item) => {
+        const renderTypeMap = {
+          [VariableInputEnum.input]: [FlowNodeInputTypeEnum.input, FlowNodeInputTypeEnum.reference],
+          [VariableInputEnum.textarea]: [
+            FlowNodeInputTypeEnum.textarea,
+            FlowNodeInputTypeEnum.reference
+          ],
+          [VariableInputEnum.numberInput]: [FlowNodeInputTypeEnum.numberInput],
+          [VariableInputEnum.select]: [FlowNodeInputTypeEnum.select],
+          [VariableInputEnum.custom]: [
+            FlowNodeInputTypeEnum.input,
+            FlowNodeInputTypeEnum.reference
+          ],
+          default: [FlowNodeInputTypeEnum.reference]
+        };
+
+        return {
+          key: item.key,
+          renderTypeList: renderTypeMap[item.type] || renderTypeMap.default,
+          label: item.label,
+          debugLabel: item.label,
+          description: '',
+          valueType: WorkflowIOValueTypeEnum.any,
+          required: item.required,
+          list: item.enums?.map((enumItem) => ({
+            label: enumItem.value,
+            value: enumItem.value
+          }))
+        };
+      });
+
+  // const showFileLink =
+  //   chatConfig?.fileSelectConfig?.canSelectFile || chatConfig?.fileSelectConfig?.canSelectImg;
+
+  return {
+    inputs: [
+      Input_Template_Stream_MODE,
+      Input_Template_History,
+      ...(chatConfig?.fileSelectConfig?.canSelectFile || chatConfig?.fileSelectConfig?.canSelectImg
+        ? [Input_Template_File_Link]
+        : []),
+      Input_Template_UserChatInput,
+      ...variableInput
+    ],
+    outputs: [
+      {
+        id: NodeOutputKeyEnum.history,
+        key: NodeOutputKeyEnum.history,
+        required: true,
+        label: i18nT('common:core.module.output.label.New context'),
+        description: i18nT('common:core.module.output.description.New context'),
+        valueType: WorkflowIOValueTypeEnum.chatHistory,
+        valueDesc: chatHistoryValueDesc,
+        type: FlowNodeOutputTypeEnum.static
+      },
+      {
+        id: NodeOutputKeyEnum.answerText,
+        key: NodeOutputKeyEnum.answerText,
+        required: false,
+        label: i18nT('common:core.module.output.label.Ai response content'),
+        description: i18nT('common:core.module.output.description.Ai response content'),
+        valueType: WorkflowIOValueTypeEnum.string,
+        type: FlowNodeOutputTypeEnum.static
+      }
+    ]
+  };
+};
+
 export const formatEditorVariablePickerIcon = (
   variables: { key: string; label: string; type?: `${VariableInputEnum}`; required?: boolean }[]
 ): EditorVariablePickerType[] => {
@@ -187,8 +320,37 @@ export const formatEditorVariablePickerIcon = (
   }));
 };
 
-export const isReferenceValue = (value: any): boolean => {
+// Check the value is a valid reference value format: [variableId, outputId]
+export const isValidReferenceValueFormat = (value: any): value is ReferenceItemValueType => {
   return Array.isArray(value) && value.length === 2 && typeof value[0] === 'string';
+};
+/* 
+  Check whether the value([variableId, outputId]) value is a valid reference value:
+  1. The value must be an array of length 2
+  2. The first item of the array must be one of VARIABLE_NODE_ID or nodeIds
+*/
+export const isValidReferenceValue = (
+  value: any,
+  nodeIds: string[]
+): value is ReferenceItemValueType => {
+  if (!isValidReferenceValueFormat(value)) return false;
+
+  const validIdSet = new Set([VARIABLE_NODE_ID, ...nodeIds]);
+  return validIdSet.has(value[0]);
+};
+/* 
+  Check whether the value([variableId, outputId][]) value is a valid reference value array:
+  1. The value must be an array
+  2. The array must contain at least one element
+  3. Each element in the array must be a valid reference value
+*/
+export const isValidArrayReferenceValue = (
+  value: any,
+  nodeIds: string[]
+): value is ReferenceArrayValueType => {
+  if (!Array.isArray(value)) return false;
+
+  return value.every((item) => isValidReferenceValue(item, nodeIds));
 };
 
 export const getElseIFLabel = (i: number) => {
@@ -230,89 +392,25 @@ export const updatePluginInputByVariables = (
   );
 };
 
-export const removePluginInputVariables = (
-  variables: Record<string, any>,
-  nodes: RuntimeNodeItemType[]
-) => {
-  const pluginInputNode = nodes.find((node) => node.flowNodeType === FlowNodeTypeEnum.pluginInput);
-
-  if (!pluginInputNode) return variables;
-  return Object.keys(variables).reduce(
-    (acc, key) => {
-      if (!pluginInputNode.inputs.find((input) => input.key === key)) {
-        acc[key] = variables[key];
-      }
-      return acc;
-    },
-    {} as Record<string, any>
-  );
-};
-
-export function replaceVariableLabel({
-  text,
-  nodes,
+/* Get plugin runtime input user query */
+export const getPluginRunUserQuery = ({
+  pluginInputs,
   variables,
-  runningNode
+  files = []
 }: {
-  text: any;
-  nodes: RuntimeNodeItemType[];
-  variables: Record<string, string | number>;
-  runningNode: RuntimeNodeItemType;
-}) {
-  if (typeof text !== 'string') return text;
-
-  const globalVariables = Object.keys(variables).map((key) => {
-    return {
-      nodeId: VARIABLE_NODE_ID,
-      id: key,
-      value: variables[key]
-    };
-  });
-
-  // Upstream node outputs
-  const nodeVariables = nodes
-    .map((node) => {
-      return node.outputs.map((output) => {
-        return {
-          nodeId: node.nodeId,
-          id: output.id,
-          value: output.value
-        };
-      });
+  pluginInputs: FlowNodeInputItemType[];
+  variables: Record<string, any>;
+  files?: RuntimeUserPromptType['files'];
+}): UserChatItemType & { dataId: string } => {
+  return {
+    dataId: getNanoid(24),
+    obj: ChatRoleEnum.Human,
+    value: runtimePrompt2ChatsValue({
+      text: getPluginRunContent({
+        pluginInputs: pluginInputs,
+        variables
+      }),
+      files
     })
-    .flat();
-
-  // Get runningNode inputs(Will be replaced with reference)
-  const customInputs = runningNode.inputs.flatMap((item) => {
-    if (Array.isArray(item.value)) {
-      return [
-        {
-          id: item.key,
-          value: getReferenceVariableValue({
-            value: item.value as ReferenceValueProps,
-            nodes,
-            variables
-          }),
-          nodeId: runningNode.nodeId
-        }
-      ];
-    }
-    return [];
-  });
-
-  const allVariables = [...globalVariables, ...nodeVariables, ...customInputs];
-
-  // Replace {{$xxx.xxx$}} to value
-  for (const key in allVariables) {
-    const val = allVariables[key];
-    const regex = new RegExp(`\\{\\{\\$(${val.nodeId}\\.${val.id})\\$\\}\\}`, 'g');
-    if (['string', 'number'].includes(typeof val.value)) {
-      text = text.replace(regex, String(val.value));
-    } else if (['object'].includes(typeof val.value)) {
-      text = text.replace(regex, JSON.stringify(val.value));
-    } else {
-      continue;
-    }
-  }
-  return text || '';
-}
+  };
+};

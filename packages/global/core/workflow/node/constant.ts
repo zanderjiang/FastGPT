@@ -1,20 +1,21 @@
 import { WorkflowIOValueTypeEnum } from '../constants';
-
+import { i18nT } from '../../../../web/i18n/utils';
 export enum FlowNodeInputTypeEnum { // render ui
   reference = 'reference', // reference to other node output
   input = 'input', // one line input
+  textarea = 'textarea',
   numberInput = 'numberInput',
   switch = 'switch', // true/false
   select = 'select',
 
   // editor
-  textarea = 'textarea',
   JSONEditor = 'JSONEditor',
 
   addInputParam = 'addInputParam', // params input
 
   // special input
   selectApp = 'selectApp',
+  customVariable = 'customVariable',
 
   // ai model select
   selectLLMModel = 'selectLLMModel',
@@ -26,7 +27,9 @@ export enum FlowNodeInputTypeEnum { // render ui
   settingDatasetQuotePrompt = 'settingDatasetQuotePrompt',
 
   hidden = 'hidden',
-  custom = 'custom'
+  custom = 'custom',
+
+  fileSelect = 'fileSelect'
 }
 export const FlowNodeInputMap: Record<
   FlowNodeInputTypeEnum,
@@ -37,20 +40,14 @@ export const FlowNodeInputMap: Record<
   [FlowNodeInputTypeEnum.reference]: {
     icon: 'core/workflow/inputType/reference'
   },
-  [FlowNodeInputTypeEnum.input]: {
-    icon: 'core/workflow/inputType/input'
-  },
   [FlowNodeInputTypeEnum.numberInput]: {
     icon: 'core/workflow/inputType/numberInput'
   },
   [FlowNodeInputTypeEnum.select]: {
-    icon: 'core/workflow/inputType/input'
+    icon: 'core/workflow/inputType/option'
   },
   [FlowNodeInputTypeEnum.switch]: {
     icon: 'core/workflow/inputType/switch'
-  },
-  [FlowNodeInputTypeEnum.textarea]: {
-    icon: 'core/workflow/inputType/textarea'
   },
   [FlowNodeInputTypeEnum.JSONEditor]: {
     icon: 'core/workflow/inputType/jsonEditor'
@@ -79,8 +76,20 @@ export const FlowNodeInputMap: Record<
   [FlowNodeInputTypeEnum.hidden]: {
     icon: 'core/workflow/inputType/select'
   },
+  [FlowNodeInputTypeEnum.customVariable]: {
+    icon: 'core/workflow/inputType/customVariable'
+  },
   [FlowNodeInputTypeEnum.custom]: {
-    icon: 'core/workflow/inputType/select'
+    icon: 'core/workflow/inputType/custom'
+  },
+  [FlowNodeInputTypeEnum.input]: {
+    icon: 'core/workflow/inputType/input'
+  },
+  [FlowNodeInputTypeEnum.textarea]: {
+    icon: 'core/workflow/inputType/textarea'
+  },
+  [FlowNodeInputTypeEnum.fileSelect]: {
+    icon: 'core/workflow/inputType/file'
   }
 };
 
@@ -94,6 +103,7 @@ export enum FlowNodeOutputTypeEnum {
 export enum FlowNodeTypeEnum {
   emptyNode = 'emptyNode',
   systemConfig = 'userGuide',
+  pluginConfig = 'pluginConfig',
   globalVariable = 'globalVariable',
   workflowStart = 'workflowStart',
   chatNode = 'chatNode',
@@ -106,79 +116,109 @@ export enum FlowNodeTypeEnum {
   contentExtract = 'contentExtract',
   httpRequest468 = 'httpRequest468',
   runApp = 'app',
+  appModule = 'appModule',
   pluginModule = 'pluginModule',
   pluginInput = 'pluginInput',
   pluginOutput = 'pluginOutput',
   queryExtension = 'cfr',
   tools = 'tools',
   stopTool = 'stopTool',
+  toolParams = 'toolParams',
   lafModule = 'lafModule',
   ifElseNode = 'ifElseNode',
   variableUpdate = 'variableUpdate',
   code = 'code',
   textEditor = 'textEditor',
-  customFeedback = 'customFeedback'
+  customFeedback = 'customFeedback',
+  readFiles = 'readFiles',
+  userSelect = 'userSelect',
+  loop = 'loop',
+  loopStart = 'loopStart',
+  loopEnd = 'loopEnd',
+  formInput = 'formInput',
+  comment = 'comment'
 }
 
 // node IO value type
-export const FlowValueTypeMap = {
+export const FlowValueTypeMap: Record<
+  WorkflowIOValueTypeEnum,
+  {
+    label: string;
+    value: WorkflowIOValueTypeEnum;
+    abandon?: boolean;
+  }
+> = {
   [WorkflowIOValueTypeEnum.string]: {
-    label: 'string',
-    value: WorkflowIOValueTypeEnum.string,
-    description: ''
+    label: 'String',
+    value: WorkflowIOValueTypeEnum.string
   },
   [WorkflowIOValueTypeEnum.number]: {
-    label: 'number',
-    value: WorkflowIOValueTypeEnum.number,
-    description: ''
+    label: 'Number',
+    value: WorkflowIOValueTypeEnum.number
   },
   [WorkflowIOValueTypeEnum.boolean]: {
-    label: 'boolean',
-    value: WorkflowIOValueTypeEnum.boolean,
-    description: ''
+    label: 'Boolean',
+    value: WorkflowIOValueTypeEnum.boolean
   },
   [WorkflowIOValueTypeEnum.object]: {
-    label: 'object',
-    value: WorkflowIOValueTypeEnum.object,
-    description: ''
+    label: 'Object',
+    value: WorkflowIOValueTypeEnum.object
   },
   [WorkflowIOValueTypeEnum.arrayString]: {
-    label: 'array<string>',
-    value: WorkflowIOValueTypeEnum.arrayString,
-    description: ''
+    label: 'Array<string>',
+    value: WorkflowIOValueTypeEnum.arrayString
   },
   [WorkflowIOValueTypeEnum.arrayNumber]: {
-    label: 'array<number>',
-    value: WorkflowIOValueTypeEnum.arrayNumber,
-    description: ''
+    label: 'Array<number>',
+    value: WorkflowIOValueTypeEnum.arrayNumber
   },
   [WorkflowIOValueTypeEnum.arrayBoolean]: {
-    label: 'array<boolean>',
-    value: WorkflowIOValueTypeEnum.arrayBoolean,
-    description: ''
+    label: 'Array<boolean>',
+    value: WorkflowIOValueTypeEnum.arrayBoolean
   },
   [WorkflowIOValueTypeEnum.arrayObject]: {
-    label: 'array<object>',
-    value: WorkflowIOValueTypeEnum.arrayObject,
-    description: ''
+    label: 'Array<object>',
+    value: WorkflowIOValueTypeEnum.arrayObject
+  },
+  [WorkflowIOValueTypeEnum.arrayAny]: {
+    label: 'Array',
+    value: WorkflowIOValueTypeEnum.arrayAny
   },
   [WorkflowIOValueTypeEnum.any]: {
-    label: 'any',
-    value: WorkflowIOValueTypeEnum.any,
-    description: ''
+    label: 'Any',
+    value: WorkflowIOValueTypeEnum.any
   },
   [WorkflowIOValueTypeEnum.chatHistory]: {
-    label: '历史记录',
-    value: WorkflowIOValueTypeEnum.chatHistory,
-    description: `{
-  obj: System | Human | AI;
-  value: string;
-}[]`
+    label: i18nT('common:core.chat.History'),
+    value: WorkflowIOValueTypeEnum.chatHistory
   },
   [WorkflowIOValueTypeEnum.datasetQuote]: {
-    label: '知识库引用',
-    value: WorkflowIOValueTypeEnum.datasetQuote,
-    description: `{
+    label: i18nT('common:core.workflow.Dataset quote'),
+    value: WorkflowIOValueTypeEnum.datasetQuote
+  },
+  [WorkflowIOValueTypeEnum.selectDataset]: {
+    label: i18nT('common:core.chat.Select dataset'),
+    value: WorkflowIOValueTypeEnum.selectDataset
+  },
+  [WorkflowIOValueTypeEnum.dynamic]: {
+    label: i18nT('common:core.workflow.dynamic_input'),
+    value: WorkflowIOValueTypeEnum.dynamic
+  },
+  [WorkflowIOValueTypeEnum.selectApp]: {
+    label: 'selectApp',
+    value: WorkflowIOValueTypeEnum.selectApp,
+    abandon: true
+  }
+};
+
+export const EDGE_TYPE = 'default';
+export const defaultNodeVersion = '481';
+
+export const chatHistoryValueDesc = `{
+  obj: System | Human | AI;
+  value: string;
+}[]`;
+export const datasetQuoteValueDesc = `{
   id: string;
   datasetId: string;
   collectionId: string;
@@ -186,26 +226,7 @@ export const FlowValueTypeMap = {
   sourceId?: string;
   q: string;
   a: string
-}[]`
-  },
-  [WorkflowIOValueTypeEnum.selectApp]: {
-    label: '选择应用',
-    value: WorkflowIOValueTypeEnum.selectApp,
-    description: ''
-  },
-  [WorkflowIOValueTypeEnum.selectDataset]: {
-    label: '选择知识库',
-    value: WorkflowIOValueTypeEnum.selectDataset,
-    description: `{
+}[]`;
+export const datasetSelectValueDesc = `{
   datasetId: string;
-}`
-  },
-  [WorkflowIOValueTypeEnum.dynamic]: {
-    label: '动态输入',
-    value: WorkflowIOValueTypeEnum.dynamic,
-    description: ''
-  }
-};
-
-export const EDGE_TYPE = 'default';
-export const defaultNodeVersion = '481';
+}[]`;

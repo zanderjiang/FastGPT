@@ -7,16 +7,16 @@ toc: true
 weight: 705
 ---
 
-本文档介绍了如何设置开发环境以构建和测试 [FastGPT](https://fastgpt.in)，。
+本文档介绍了如何设置开发环境以构建和测试 [FastGPT](https://tryfastgpt.ai)，。
 
 ## 前置依赖项
 
-您需要在计算机上安装和配置以下依赖项才能构建 [FastGPT](https://fastgpt.in)：
+您需要在计算机上安装和配置以下依赖项才能构建 [FastGPT](https://tryfastgpt.ai)：
 
 - [Git](http://git-scm.com/)
 - [Docker](https://www.docker.com/)（构建镜像）
-- [Node.js v18.17 / v20.x](http://nodejs.org)（版本尽量一样，可以使用nvm管理node版本）
-- [pnpm](https://pnpm.io/) 版本 8.6.0 (目前官方的开发环境)
+- [Node.js v20.14.0](http://nodejs.org)（版本尽量一样，可以使用nvm管理node版本）
+- [pnpm](https://pnpm.io/) 推荐版本 9.4.0 (目前官方的开发环境)
 - make命令: 根据不同平台，百度安装 (官方是GNU Make 4.3)
 
 ## 开始本地开发
@@ -77,8 +77,6 @@ Mongo 数据库需要注意，需要注意在连接地址中增加 `directConnec
 可参考项目根目录下的 `dev.md`，第一次编译运行可能会有点慢，需要点耐心哦
 
 ```bash
-# 给自动化脚本代码执行权限(非 linux 系统, 可以手动执行里面的 postinstall.sh 文件内容)
-chmod -R +x ./scripts/
 # 代码根目录下执行，会安装根 package、projects 和 packages 内所有依赖
 # 如果提示 isolate-vm 安装失败，可以参考：https://github.com/laverdet/isolated-vm?tab=readme-ov-file#requirements
 pnpm i
@@ -148,9 +146,9 @@ FastGPT 在`pnpm i`后会执行`postinstall`脚本，用于自动生成`ChakraUI
 
 ## 加入社区
 
-遇到困难了吗？有任何问题吗? 加入微信群与开发者和用户保持沟通。
+遇到困难了吗？有任何问题吗? 加入飞书群与开发者和用户保持沟通。
 
-<img width="400px" src="https://oss.laf.run/htr4n1-images/fastgpt-qr-code.jpg" class="medium-zoom-image" />
+<img width="400px" src="https://oss.laf.run/otnvvf-imgs/fastgpt-feishu1.png" class="medium-zoom-image" />
 
 ## 代码结构说明
 

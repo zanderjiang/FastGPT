@@ -9,6 +9,7 @@ const unAuthPage: { [key: string]: boolean } = {
   '/login': true,
   '/login/provider': true,
   '/login/fastlogin': true,
+  '/login/sso': true,
   '/appStore': true,
   '/chat/share': true,
   '/chat/team': true,
@@ -16,7 +17,7 @@ const unAuthPage: { [key: string]: boolean } = {
   '/price': true
 };
 
-const Auth = ({ children }: { children: JSX.Element }) => {
+const Auth = ({ children }: { children: JSX.Element | React.ReactNode }) => {
   const { t } = useTranslation();
   const router = useRouter();
   const { toast } = useToast();

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import 'katex/dist/katex.min.css';
 import RemarkMath from 'remark-math'; // Math syntax
@@ -10,34 +10,42 @@ import RehypeExternalLinks from 'rehype-external-links';
 import styles from './index.module.scss';
 import dynamic from 'next/dynamic';
 
-import { Link, Button } from '@chakra-ui/react';
-import MyTooltip from '@fastgpt/web/components/common/MyTooltip';
-import { useTranslation } from 'next-i18next';
-import { EventNameEnum, eventBus } from '@/web/common/utils/eventbus';
-import MyIcon from '@fastgpt/web/components/common/Icon';
-import { MARKDOWN_QUOTE_SIGN } from '@fastgpt/global/core/chat/constants';
-import { CodeClassNameEnum } from './utils';
+import { Box } from '@chakra-ui/react';
+import { CodeClassNameEnum, mdTextFormat } from './utils';
 
-const CodeLight = dynamic(() => import('./CodeLight'), { ssr: false });
+const CodeLight = dynamic(() => import('./codeBlock/CodeLight'), { ssr: false });
 const MermaidCodeBlock = dynamic(() => import('./img/MermaidCodeBlock'), { ssr: false });
 const MdImage = dynamic(() => import('./img/Image'), { ssr: false });
 const EChartsCodeBlock = dynamic(() => import('./img/EChartsCodeBlock'), { ssr: false });
+const IframeCodeBlock = dynamic(() => import('./codeBlock/Iframe'), { ssr: false });
+const IframeHtmlCodeBlock = dynamic(() => import('./codeBlock/iframe-html'), { ssr: false });
+const VideoBlock = dynamic(() => import('./codeBlock/Video'), { ssr: false });
+const AudioBlock = dynamic(() => import('./codeBlock/Audio'), { ssr: false });
 
 const ChatGuide = dynamic(() => import('./chat/Guide'), { ssr: false });
 const QuestionGuide = dynamic(() => import('./chat/QuestionGuide'), { ssr: false });
+const A = dynamic(() => import('./A'), { ssr: false });
 
-const Markdown = ({
-  source = '',
-  showAnimation = false
-}: {
+type Props = {
   source?: string;
   showAnimation?: boolean;
-}) => {
+  isDisabled?: boolean;
+  forbidZhFormat?: boolean;
+};
+const Markdown = (props: Props) => {
+  const source = props.source || '';
+
+  if (source.length < 200000) {
+    return <MarkdownRender {...props} />;
+  }
+
+  return <Box whiteSpace={'pre-wrap'}>{source}</Box>;
+};
+const MarkdownRender = ({ source = '', showAnimation, isDisabled, forbidZhFormat }: Props) => {
   const components = useMemo<any>(
     () => ({
       img: Image,
       pre: RewritePre,
-      p: (pProps: any) => <p {...pProps} dir="auto" />,
       code: Code,
       a: A
     }),
@@ -45,31 +53,36 @@ const Markdown = ({
   );
 
   const formatSource = useMemo(() => {
-    const formatSource = source
-      .replace(/(http[s]?:\/\/[^\s，。]+)([。，])/g, '$1 $2') // Follow the link with a space
-      .replace(/\n*(\[QUOTE SIGN\]\(.*\))/g, '$1');
+    if (showAnimation || forbidZhFormat) return source;
+    return mdTextFormat(source);
+  }, [forbidZhFormat, showAnimation, source]);
 
-    return formatSource;
-  }, [source]);
+  const urlTransform = useCallback((val: string) => {
+    return val;
+  }, []);
 
   return (
-    <ReactMarkdown
-      className={`markdown ${styles.markdown}
+    <Box position={'relative'}>
+      <ReactMarkdown
+        className={`markdown ${styles.markdown}
       ${showAnimation ? `${formatSource ? styles.waitingAnimation : styles.animation}` : ''}
     `}
-      remarkPlugins={[RemarkMath, [RemarkGfm, { singleTilde: false }], RemarkBreaks]}
-      rehypePlugins={[RehypeKatex, [RehypeExternalLinks, { target: '_blank' }]]}
-      components={components}
-    >
-      {formatSource}
-    </ReactMarkdown>
+        remarkPlugins={[RemarkMath, [RemarkGfm, { singleTilde: false }], RemarkBreaks]}
+        rehypePlugins={[RehypeKatex, [RehypeExternalLinks, { target: '_blank' }]]}
+        components={components}
+        urlTransform={urlTransform}
+      >
+        {formatSource}
+      </ReactMarkdown>
+      {isDisabled && <Box position={'absolute'} top={0} right={0} left={0} bottom={0} />}
+    </Box>
   );
 };
 
 export default React.memo(Markdown);
 
 /* Custom dom */
-const Code = React.memo(function Code(e: any) {
+function Code(e: any) {
   const { className, codeBlock, children } = e;
   const match = /language-(\w+)/.exec(className || '');
   const codeType = match?.[1];
@@ -89,6 +102,22 @@ const Code = React.memo(function Code(e: any) {
     if (codeType === CodeClassNameEnum.echarts) {
       return <EChartsCodeBlock code={strChildren} />;
     }
+    if (codeType === CodeClassNameEnum.iframe) {
+      return <IframeCodeBlock code={strChildren} />;
+    }
+    if (codeType && codeType.toLowerCase() === CodeClassNameEnum.html) {
+      return (
+        <IframeHtmlCodeBlock className={className} codeBlock={codeBlock} match={match}>
+          {children}
+        </IframeHtmlCodeBlock>
+      );
+    }
+    if (codeType === CodeClassNameEnum.video) {
+      return <VideoBlock code={strChildren} />;
+    }
+    if (codeType === CodeClassNameEnum.audio) {
+      return <AudioBlock code={strChildren} />;
+    }
 
     return (
       <CodeLight className={className} codeBlock={codeBlock} match={match}>
@@ -98,56 +127,11 @@ const Code = React.memo(function Code(e: any) {
   }, [codeType, className, codeBlock, match, children, strChildren]);
 
   return Component;
-});
-const Image = React.memo(function Image({ src }: { src?: string }) {
+}
+
+function Image({ src }: { src?: string }) {
   return <MdImage src={src} />;
-});
-const A = React.memo(function A({ children, ...props }: any) {
-  const { t } = useTranslation();
-
-  // empty href link
-  if (!props.href && typeof children?.[0] === 'string') {
-    const text = useMemo(() => String(children), [children]);
-
-    return (
-      <MyTooltip label={t('common:core.chat.markdown.Quick Question')}>
-        <Button
-          variant={'whitePrimary'}
-          size={'xs'}
-          borderRadius={'md'}
-          my={1}
-          onClick={() => eventBus.emit(EventNameEnum.sendQuestion, { text })}
-        >
-          {text}
-        </Button>
-      </MyTooltip>
-    );
-  }
-
-  // quote link(未使用)
-  if (children?.length === 1 && typeof children?.[0] === 'string') {
-    const text = String(children);
-    if (text === MARKDOWN_QUOTE_SIGN && props.href) {
-      return (
-        <MyTooltip label={props.href}>
-          <MyIcon
-            name={'core/chat/quoteSign'}
-            transform={'translateY(-2px)'}
-            w={'18px'}
-            color={'primary.500'}
-            cursor={'pointer'}
-            _hover={{
-              color: 'primary.700'
-            }}
-            // onClick={() => getCollectionSourceAndOpen(props.href)}
-          />
-        </MyTooltip>
-      );
-    }
-  }
-
-  return <Link {...props}>{children}</Link>;
-});
+}
 
 function RewritePre({ children }: any) {
   const modifiedChildren = React.Children.map(children, (child) => {

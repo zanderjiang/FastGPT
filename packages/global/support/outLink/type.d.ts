@@ -1,8 +1,9 @@
-import { AppSchema } from 'core/app/type';
+import { AppSchema } from '../../core/app/type';
 import { PublishChannelEnum } from './constant';
+import { RequireOnlyOne } from '../../common/type/utils';
 
 // Feishu Config interface
-export interface FeishuType {
+export interface FeishuAppType {
   appId: string;
   appSecret: string;
   // Encrypt config
@@ -10,29 +11,49 @@ export interface FeishuType {
   encryptKey?: string; // no secret if null
   // Token Verification
   // refer to: https://open.feishu.cn/document/server-docs/event-subscription-guide/event-subscription-configure-/encrypt-key-encryption-configuration-case
-  verificationToken: string;
+  verificationToken?: string;
 }
 
-// TODO: Unused
-export interface WecomType {
-  ReplyLimit: Boolean;
-  defaultResponse: string;
-  immediateResponse: boolean;
-  WXWORK_TOKEN: string;
-  WXWORK_AESKEY: string;
-  WXWORK_SECRET: string;
-  WXWORD_ID: string;
+export interface DingtalkAppType {
+  clientId: string;
+  clientSecret: string;
 }
 
-export type OutLinkSchema<T = void> = {
+export interface WecomAppType {
+  AgentId: string;
+  CorpId: string;
+  SuiteSecret: string;
+  CallbackToken: string;
+  CallbackEncodingAesKey: string;
+}
+
+// TODO: unused
+export interface WechatAppType {}
+
+export interface OffiAccountAppType {
+  appId: string;
+  isVerified?: boolean; // if isVerified, we could use '客服接口' to reply
+  secret: string;
+  CallbackToken: string;
+  CallbackEncodingAesKey?: string;
+  timeoutReply?: string; // if timeout (15s), will reply this content.
+  // timeout reply is optional, but when isVerified is false, the wechat will reply a default message which is `该公众号暂时无法提供服务，请稍后再试`
+  // because we can not reply anything in 15s. Thus, the wechat server will treat this request as a failed request.
+}
+
+export type OutlinkAppType =
+  | FeishuAppType
+  | WecomAppType
+  | OffiAccountAppType
+  | DingtalkAppType
+  | undefined;
+
+export type OutLinkSchema<T extends OutlinkAppType = undefined> = {
   _id: string;
   shareId: string;
   teamId: string;
   tmbId: string;
   appId: string;
-  // teamId: Schema.Types.ObjectId;
-  // tmbId: Schema.Types.ObjectId;
-  // appId: Schema.Types.ObjectId;
   name: string;
   usagePoints: number;
   lastTime: Date;
@@ -40,6 +61,10 @@ export type OutLinkSchema<T = void> = {
 
   // whether the response content is detailed
   responseDetail: boolean;
+  // whether to hide the node status
+  showNodeStatus?: boolean;
+  // whether to show the complete quote
+  showRawSource?: boolean;
 
   // response when request
   immediateResponse?: string;
@@ -55,19 +80,16 @@ export type OutLinkSchema<T = void> = {
     hookUrl?: string;
   };
 
-  app?: T;
-};
-
-// to handle MongoDB querying
-export type OutLinkWithAppType = Omit<OutLinkSchema, 'appId'> & {
-  appId: AppSchema;
+  app: T;
 };
 
 // Edit the Outlink
-export type OutLinkEditType<T = void> = {
+export type OutLinkEditType<T = undefined> = {
   _id?: string;
   name: string;
-  responseDetail: OutLinkSchema<T>['responseDetail'];
+  responseDetail?: OutLinkSchema<T>['responseDetail'];
+  showNodeStatus?: OutLinkSchema<T>['showNodeStatus'];
+  showRawSource?: OutLinkSchema<T>['showRawSource'];
   // response when request
   immediateResponse?: string;
   // response when error or other situation

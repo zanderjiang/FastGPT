@@ -1,4 +1,4 @@
-import { DELETE, GET, POST } from '@/web/common/api/request';
+import { GET, POST } from '@/web/common/api/request';
 import type { createHttpPluginBody } from '@/pages/api/core/app/httpPlugin/create';
 import type { UpdateHttpPluginBody } from '@/pages/api/core/app/httpPlugin/update';
 import type {
@@ -7,34 +7,48 @@ import type {
 } from '@fastgpt/global/core/workflow/type/node';
 import { getMyApps } from '../api';
 import type { ListAppBody } from '@/pages/api/core/app/list';
-import { FlowNodeTypeEnum } from '@fastgpt/global/core/workflow/node/constant';
+import { defaultNodeVersion, FlowNodeTypeEnum } from '@fastgpt/global/core/workflow/node/constant';
 import { FlowNodeTemplateTypeEnum } from '@fastgpt/global/core/workflow/constants';
 import type { GetPreviewNodeQuery } from '@/pages/api/core/app/plugin/getPreviewNode';
 import { AppTypeEnum } from '@fastgpt/global/core/app/constants';
 import { ParentIdType, ParentTreePathItemType } from '@fastgpt/global/common/parentFolder/type';
 import { GetSystemPluginTemplatesBody } from '@/pages/api/core/app/plugin/getSystemPluginTemplates';
+import { PluginGroupSchemaType } from '@fastgpt/service/core/app/plugin/type';
+import { useSystemStore } from '@/web/common/system/useSystemStore';
+import { defaultGroup } from '@fastgpt/web/core/workflow/constants';
 
 /* ============ team plugin ============== */
 export const getTeamPlugTemplates = (data?: ListAppBody) =>
   getMyApps(data).then((res) =>
-    res.map<NodeTemplateListItemType>((app) => ({
+    res.map((app) => ({
+      tmbId: app.tmbId,
       id: app._id,
       pluginId: app._id,
       isFolder: app.type === AppTypeEnum.folder || app.type === AppTypeEnum.httpPlugin,
       templateType: FlowNodeTemplateTypeEnum.teamApp,
-      flowNodeType: FlowNodeTypeEnum.pluginModule,
+      flowNodeType:
+        app.type === AppTypeEnum.workflow
+          ? FlowNodeTypeEnum.appModule
+          : FlowNodeTypeEnum.pluginModule,
       avatar: app.avatar,
       name: app.name,
       intro: app.intro,
       showStatus: false,
-      version: app.pluginData?.nodeVersion || '481',
-      isTool: true
+      version: app.pluginData?.nodeVersion || defaultNodeVersion,
+      isTool: true,
+      sourceMember: app.sourceMember
     }))
   );
 
 /* ============ system plugin ============== */
 export const getSystemPlugTemplates = (data: GetSystemPluginTemplatesBody) =>
   POST<NodeTemplateListItemType[]>('/core/app/plugin/getSystemPluginTemplates', data);
+
+export const getPluginGroups = () => {
+  return useSystemStore.getState()?.feConfigs?.isPlus
+    ? GET<PluginGroupSchemaType[]>('/proApi/core/app/plugin/getPluginGroups')
+    : Promise.resolve([defaultGroup]);
+};
 
 export const getSystemPluginPaths = (parentId: ParentIdType) => {
   if (!parentId) return Promise.resolve<ParentTreePathItemType[]>([]);

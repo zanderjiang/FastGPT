@@ -14,9 +14,9 @@ weight: 920
 {{< table "table-hover table-striped-columns" >}}
 | 模型名 | 内存 | 显存 | 硬盘空间 | 启动命令 |
 |------|---------|---------|----------|--------------------------|
-| bge-rerank-base | >=4GB | >=4GB | >=8GB | python app.py |
-| bge-rerank-large | >=8GB | >=8GB | >=8GB | python app.py |
-| bge-rerank-v2-m3 | >=8GB | >=8GB | >=8GB | python app.py |
+| bge-reranker-base | >=4GB | >=4GB | >=8GB | python app.py |
+| bge-reranker-large | >=8GB | >=8GB | >=8GB | python app.py |
+| bge-reranker-v2-m3 | >=8GB | >=8GB | >=8GB | python app.py |
 {{< /table >}}
 
 ## 源码部署
@@ -31,9 +31,9 @@ weight: 920
 
 3 个模型代码分别为：
 
-1. [https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-reranker-base](https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-reranker-base)
-2. [https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-reranker-large](https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-reranker-large)
-3. [https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-rerank-v2-m3](https://github.com/labring/FastGPT/tree/main/python/bge-rerank/bge-rerank-v2-m3)
+1. [https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-base](https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-base)
+2. [https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-large](https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-large)
+3. [https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-v2-m3](https://github.com/labring/FastGPT/tree/main/plugins/rerank-bge/bge-reranker-v2-m3)
 
 ### 3. 安装依赖
 
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 1. [https://huggingface.co/BAAI/bge-reranker-base](https://huggingface.co/BAAI/bge-reranker-base)
 2. [https://huggingface.co/BAAI/bge-reranker-large](https://huggingface.co/BAAI/bge-reranker-large)
-3. [https://huggingface.co/BAAI/bge-rerank-v2-m3](https://huggingface.co/BAAI/bge-rerank-v2-m3)
+3. [https://huggingface.co/BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)
 
 在对应代码目录下 clone 模型。目录结构：
 
@@ -118,4 +118,27 @@ services:
 ```
 ## 接入 FastGPT
 
-参考 [ReRank模型接入](/docs/development/configuration/#rerank-接入)，host 变量为部署的域名。
+1. 打开 FastGPT 模型配置，新增一个重排模型。
+2. 填写模型配置表单：模型 ID 为`bge-reranker-base`，地址填写`{{host}}/v1/rerank`，host 为你部署的域名/IP:Port。
+
+![alt text](/imgs/image-102.png)
+
+## QA
+
+### 403报错
+
+FastGPT中，自定义请求 Token 和环境变量的 ACCESS_TOKEN 不一致。 
+
+### Docker 运行提示 `Bus error (core dumped)`
+
+尝试增加 `docker-compose.yml` 配置项 `shm_size` ，以增加容器中的共享内存目录大小。
+
+```
+...
+services:
+  reranker:
+    ...
+    container_name: reranker
+    shm_size: '2gb'
+    ...
+```

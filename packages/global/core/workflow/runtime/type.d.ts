@@ -2,8 +2,9 @@ import { ChatNodeUsageType } from '../../../support/wallet/bill/type';
 import {
   ChatItemType,
   UserChatItemValueItemType,
-  ChatItemValueItemType,
-  ToolRunResponseItemType
+  ToolRunResponseItemType,
+  NodeOutputItemType,
+  AIChatItemValueItemType
 } from '../../chat/type';
 import { FlowNodeInputItemType, FlowNodeOutputItemType } from '../type/io.d';
 import { StoreNodeItemType } from '../type/node';
@@ -16,24 +17,47 @@ import { UserModelSchema } from '../../../support/user/type';
 import { AppDetailType, AppSchema } from '../../app/type';
 import { RuntimeNodeItemType } from '../runtime/type';
 import { RuntimeEdgeItemType } from './edge';
+import { ReadFileNodeResponse } from '../template/system/readFiles/type';
+import { UserSelectOptionType } from '../template/system/userSelect/type';
+import { WorkflowResponseType } from '../../../../service/core/workflow/dispatch/type';
+import { AiChatQuoteRoleType } from '../template/system/aiChat/type';
+import { LafAccountType, OpenaiAccountType } from '../../../support/user/team/type';
+
+export type ExternalProviderType = {
+  openaiAccount?: OpenaiAccountType;
+  externalWorkflowVariables?: Record<string, string>;
+};
 
 /* workflow props */
 export type ChatDispatchProps = {
   res?: NextApiResponse;
+  requestOrigin?: string;
   mode: 'test' | 'chat' | 'debug';
-  teamId: string;
-  tmbId: string;
-  user: UserModelSchema;
-  app: AppDetailType | AppSchema;
+  timezone: string;
+  externalProvider: ExternalProviderType;
+
+  runningAppInfo: {
+    id: string; // May be the id of the system plug-in (cannot be used directly to look up the table)
+    teamId: string;
+    tmbId: string; // App tmbId
+  };
+  runningUserInfo: {
+    teamId: string;
+    tmbId: string;
+  };
+  uid: string; // Who run this workflow
+
   chatId?: string;
   responseChatItemId?: string;
   histories: ChatItemType[];
   variables: Record<string, any>; // global variable
   query: UserChatItemValueItemType[]; // trigger query
+  chatConfig: AppSchema['chatConfig'];
   stream: boolean;
-  detail: boolean; // response detail
   maxRunTimes: number;
   isToolCall?: boolean;
+  workflowStreamResponse?: WorkflowResponseType;
+  workflowDispatchDeep?: number;
 };
 
 export type ModuleDispatchProps<T> = ChatDispatchProps & {
@@ -44,10 +68,12 @@ export type ModuleDispatchProps<T> = ChatDispatchProps & {
 };
 
 export type SystemVariablesType = {
+  userId: string;
   appId: string;
   chatId?: string;
   responseChatItemId?: string;
   histories: ChatItemType[];
+  cTime: string;
 };
 
 /* node props */
@@ -58,23 +84,13 @@ export type RuntimeNodeItemType = {
   intro?: StoreNodeItemType['intro'];
   flowNodeType: StoreNodeItemType['flowNodeType'];
   showStatus?: StoreNodeItemType['showStatus'];
-  isEntry?: StoreNodeItemType['isEntry'];
+  isEntry?: boolean;
 
   inputs: FlowNodeInputItemType[];
   outputs: FlowNodeOutputItemType[];
 
-  pluginId?: string;
-};
-
-export type PluginRuntimeType = {
-  id: string;
-  teamId?: string;
-  name: string;
-  avatar: string;
-  showStatus?: boolean;
-  currentCost?: number;
-  nodes: StoreNodeItemType[];
-  edges: StoreEdgeItemType[];
+  pluginId?: string; // workflow id / plugin id
+  version: string;
 };
 
 export type RuntimeEdgeItemType = StoreEdgeItemType & {
@@ -90,17 +106,24 @@ export type DispatchNodeResponseType = {
   error?: Record<string, any>;
   customInputs?: Record<string, any>;
   customOutputs?: Record<string, any>;
+  nodeInputs?: Record<string, any>;
+  nodeOutputs?: Record<string, any>;
+  mergeSignId?: string;
 
   // bill
-  tokens?: number;
+  tokens?: number; // deprecated
+  inputTokens?: number;
+  outputTokens?: number;
   model?: string;
   contextTotalLen?: number;
   totalPoints?: number;
+  childTotalPoints?: number;
 
   // chat
   temperature?: number;
   maxToken?: number;
   quoteList?: SearchDataResponseItemType[];
+  reasoningText?: string;
   historyPreview?: {
     obj: `${ChatRoleEnum}`;
     value: string;
@@ -111,9 +134,20 @@ export type DispatchNodeResponseType = {
   limit?: number;
   searchMode?: `${DatasetSearchModeEnum}`;
   searchUsingReRank?: boolean;
-  extensionModel?: string;
-  extensionResult?: string;
-  extensionTokens?: number;
+  queryExtensionResult?: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    query: string;
+  };
+  deepSearchResult?: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+  };
+
+  // dataset concat
+  concatLength?: number;
 
   // cq
   cqList?: ClassifyQuestionAgentItemType[];
@@ -125,7 +159,7 @@ export type DispatchNodeResponseType = {
 
   // http
   params?: Record<string, any>;
-  body?: Record<string, any>;
+  body?: Record<string, any> | string;
   headers?: Record<string, any>;
   httpResult?: Record<string, any>;
 
@@ -138,6 +172,8 @@ export type DispatchNodeResponseType = {
 
   // tool
   toolCallTokens?: number;
+  toolCallInputTokens?: number;
+  toolCallOutputTokens?: number;
   toolDetail?: ChatHistoryItemResType[];
   toolStop?: boolean;
 
@@ -146,24 +182,68 @@ export type DispatchNodeResponseType = {
 
   // plugin
   pluginOutput?: Record<string, any>;
+
+  // read files
+  readFilesResult?: string;
+  readFiles?: ReadFileNodeResponse;
+
+  // user select
+  userSelectResult?: string;
+
+  // update var
+  updateVarResult?: any[];
+
+  // loop
+  loopResult?: any[];
+  loopInput?: any[];
+  loopDetail?: ChatHistoryItemResType[];
+  // loop start
+  loopInputValue?: any;
+  // loop end
+  loopOutputValue?: any;
+
+  // form input
+  formInputResult?: string;
+
+  // tool params
+  toolParamsResult?: Record<string, any>;
+
+  // abandon
+  extensionModel?: string;
+  extensionResult?: string;
+  extensionTokens?: number;
 };
 
-export type DispatchNodeResultType<T> = {
+export type DispatchNodeResultType<T = {}> = {
   [DispatchNodeResponseKeyEnum.skipHandleId]?: string[]; // skip some edge handle id
   [DispatchNodeResponseKeyEnum.nodeResponse]?: DispatchNodeResponseType; // The node response detail
-  [DispatchNodeResponseKeyEnum.nodeDispatchUsages]?: ChatNodeUsageType[]; //
-  [DispatchNodeResponseKeyEnum.childrenResponses]?: DispatchNodeResultType[];
-  [DispatchNodeResponseKeyEnum.toolResponses]?: ToolRunResponseItemType;
-  [DispatchNodeResponseKeyEnum.assistantResponses]?: ChatItemValueItemType[];
+  [DispatchNodeResponseKeyEnum.nodeDispatchUsages]?: ChatNodeUsageType[]; // Node total usage
+  [DispatchNodeResponseKeyEnum.childrenResponses]?: DispatchNodeResultType[]; // Children node response
+  [DispatchNodeResponseKeyEnum.toolResponses]?: ToolRunResponseItemType; // Tool response
+  [DispatchNodeResponseKeyEnum.assistantResponses]?: AIChatItemValueItemType[]; // Assistant response(Store to db)
+  [DispatchNodeResponseKeyEnum.rewriteHistories]?: ChatItemType[];
+  [DispatchNodeResponseKeyEnum.runTimes]?: number;
+  [DispatchNodeResponseKeyEnum.newVariables]?: Record<string, any>;
 } & T;
 
 /* Single node props */
 export type AIChatNodeProps = {
   [NodeInputKeyEnum.aiModel]: string;
   [NodeInputKeyEnum.aiSystemPrompt]?: string;
-  [NodeInputKeyEnum.aiChatTemperature]: number;
-  [NodeInputKeyEnum.aiChatMaxToken]: number;
+  [NodeInputKeyEnum.aiChatTemperature]?: number;
+  [NodeInputKeyEnum.aiChatMaxToken]?: number;
   [NodeInputKeyEnum.aiChatIsResponseText]: boolean;
+  [NodeInputKeyEnum.aiChatVision]?: boolean;
+  [NodeInputKeyEnum.aiChatReasoning]?: boolean;
+  [NodeInputKeyEnum.aiChatTopP]?: number;
+  [NodeInputKeyEnum.aiChatStopSign]?: string;
+  [NodeInputKeyEnum.aiChatResponseFormat]?: string;
+  [NodeInputKeyEnum.aiChatJsonSchema]?: string;
+
+  [NodeInputKeyEnum.aiChatQuoteRole]?: AiChatQuoteRoleType;
   [NodeInputKeyEnum.aiChatQuoteTemplate]?: string;
   [NodeInputKeyEnum.aiChatQuotePrompt]?: string;
+
+  [NodeInputKeyEnum.stringQuoteText]?: string;
+  [NodeInputKeyEnum.fileUrlList]?: string[];
 };

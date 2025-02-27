@@ -1,9 +1,13 @@
 import { replaceVariable } from '@fastgpt/global/common/string/tools';
-import { getAIApi } from '../config';
+import { createChatCompletion } from '../config';
 import { ChatItemType } from '@fastgpt/global/core/chat/type';
-import { countGptMessagesTokens } from '../../../common/string/tiktoken/index';
-import { ChatCompletionMessageParam } from '@fastgpt/global/core/ai/type';
-import { chatValue2RuntimePrompt } from '@fastgpt/global/core/chat/adapt';
+import { countGptMessagesTokens, countPromptTokens } from '../../../common/string/tiktoken/index';
+import { chats2GPTMessages } from '@fastgpt/global/core/chat/adapt';
+import { getLLMModel } from '../model';
+import { llmCompletionsBodyFormat } from '../utils';
+import { addLog } from '../../../common/system/log';
+import { filterGPTMessageByMaxContext } from '../../chat/utils';
+import json5 from 'json5';
 
 /* 
     query extension - 问题扩展
@@ -13,6 +17,7 @@ import { chatValue2RuntimePrompt } from '@fastgpt/global/core/chat/adapt';
 const defaultPrompt = `As a vector retrieval assistant, your task is to generate different versions of "retrieval terms" for the "original question" from different perspectives, combining historical records to improve the semantic richness and precision of vector retrieval. The generated questions must be clear and specific to the subject, and use the same language as the "original question". For example:
 History: 
 """
+null
 """
 Original question: Tell me about the engine.
 Retrieval terms: ["Describe the engine specifications.", "What is the engine capacity?", "What type of engine does it have?"]
@@ -183,18 +188,34 @@ export const queryExtension = async ({
   rawQuery: string;
   extensionQueries: string[];
   model: string;
-  tokens: number;
+  inputTokens: number;
+  outputTokens: number;
 }> => {
   const systemFewShot = chatBg
-    ? `Q: 对话背景。
-A: ${chatBg}
+    ? `user: 对话背景。
+assistant: ${chatBg}
 `
     : '';
-  const historyFewShot = histories
+
+  const modelData = getLLMModel(model);
+  const filterHistories = await filterGPTMessageByMaxContext({
+    messages: chats2GPTMessages({ messages: histories, reserveId: false }),
+    maxContext: modelData.maxContext - 1000
+  });
+
+  const historyFewShot = filterHistories
     .map((item) => {
-      const role = item.obj === 'Human' ? 'Q' : 'A';
-      return `${role}: ${chatValue2RuntimePrompt(item.value).text}`;
+      const role = item.role;
+      const content = item.content;
+      if ((role === 'user' || role === 'assistant') && content) {
+        if (typeof content === 'string') {
+          return `${role}: ${content}`;
+        } else {
+          return `${role}: ${content.map((item) => (item.type === 'text' ? item.text : '')).join('\n')}`;
+        }
+      }
     })
+    .filter(Boolean)
     .join('\n');
   const concatFewShot = `${systemFewShot}${historyFewShot}`.trim();
 
@@ -208,16 +229,21 @@ A: ${chatBg}
       role: 'user',
       content: replaceVariable(defaultSchoolPrompt, {
         query: `${query}`,
-        histories: concatFewShot
+        histories: concatFewShot || 'null'
       })
     }
-  ] as ChatCompletionMessageParam[];
-  const result = await ai.chat.completions.create({
-    model: model,
-    temperature: 0.01,
-    // @ts-ignore
-    messages,
-    stream: false
+  ] as any;
+
+  const { response: result } = await createChatCompletion({
+    body: llmCompletionsBodyFormat(
+      {
+        stream: false,
+        model: modelData.model,
+        temperature: 0.1,
+        messages
+      },
+      modelData
+    )
   });
 
   let answer = result.choices?.[0]?.message?.content || '';
@@ -226,28 +252,52 @@ A: ${chatBg}
       rawQuery: query,
       extensionQueries: [],
       model,
-      tokens: 0
+      inputTokens: 0,
+      outputTokens: 0
     };
   }
 
-  answer = answer.replace(/\\"/g, '"');
-
-  try {
-    const queries = JSON.parse(answer) as string[];
-
-    return {
-      rawQuery: query,
-      extensionQueries: Array.isArray(queries) ? queries : [],
-      model,
-      tokens: await countGptMessagesTokens(messages)
-    };
-  } catch (error) {
-    console.log(error);
+  const start = answer.indexOf('[');
+  const end = answer.lastIndexOf(']');
+  if (start === -1 || end === -1) {
+    addLog.warn('Query extension failed, not a valid JSON', {
+      answer
+    });
     return {
       rawQuery: query,
       extensionQueries: [],
       model,
-      tokens: 0
+      inputTokens: 0,
+      outputTokens: 0
+    };
+  }
+
+  // Intercept the content of [] and retain []
+  const jsonStr = answer
+    .substring(start, end + 1)
+    .replace(/(\\n|\\)/g, '')
+    .replace(/  /g, '');
+
+  try {
+    const queries = json5.parse(jsonStr) as string[];
+
+    return {
+      rawQuery: query,
+      extensionQueries: (Array.isArray(queries) ? queries : []).slice(0, 5),
+      model,
+      inputTokens: await countGptMessagesTokens(messages),
+      outputTokens: await countPromptTokens(answer)
+    };
+  } catch (error) {
+    addLog.warn('Query extension failed, not a valid JSON', {
+      answer
+    });
+    return {
+      rawQuery: query,
+      extensionQueries: [],
+      model,
+      inputTokens: 0,
+      outputTokens: 0
     };
   }
 };

@@ -9,7 +9,10 @@ export const postUploadFiles = (
   data: FormData,
   onUploadProgress: (progressEvent: AxiosProgressEvent) => void
 ) =>
-  POST<string>('/common/file/upload', data, {
+  POST<{
+    fileId: string;
+    previewUrl: string;
+  }>('/common/file/upload', data, {
     timeout: 600000,
     onUploadProgress,
     headers: {
@@ -21,4 +24,6 @@ export const getPreviewFileContent = (data: PreviewContextProps) =>
   POST<{
     previewContent: string;
     totalLength: number;
-  }>('/common/file/previewContent', data);
+  }>('/common/file/previewContent', data, {
+    timeout: 600000
+  });

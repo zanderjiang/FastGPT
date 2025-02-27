@@ -11,6 +11,7 @@ import {
 import { TeamErrEnum } from '@fastgpt/global/common/error/code/team';
 import { useSystemStore } from '../system/useSystemStore';
 import { formatTime2YMDHMW } from '@fastgpt/global/common/string/time';
+import { getWebReqUrl } from '@fastgpt/web/common/system/utils';
 
 type StreamFetchProps = {
   url?: string;
@@ -22,6 +23,20 @@ export type StreamResponseType = {
   responseText: string;
   [DispatchNodeResponseKeyEnum.nodeResponse]: ChatHistoryItemResType[];
 };
+type ResponseQueueItemType =
+  | {
+      event: SseResponseEventEnum.fastAnswer | SseResponseEventEnum.answer;
+      text?: string;
+      reasoningText?: string;
+    }
+  | { event: SseResponseEventEnum.interactive; [key: string]: any }
+  | {
+      event:
+        | SseResponseEventEnum.toolCall
+        | SseResponseEventEnum.toolParams
+        | SseResponseEventEnum.toolResponse;
+      [key: string]: any;
+    };
 class FatalError extends Error {}
 
 export const streamFetch = ({
@@ -31,22 +46,14 @@ export const streamFetch = ({
   abortCtrl
 }: StreamFetchProps) =>
   new Promise<StreamResponseType>(async (resolve, reject) => {
+    // First res
     const timeoutId = setTimeout(() => {
       abortCtrl.abort('Time out');
     }, 60000);
 
     // response data
     let responseText = '';
-    let responseQueue: (
-      | { event: SseResponseEventEnum.fastAnswer | SseResponseEventEnum.answer; text: string }
-      | {
-          event:
-            | SseResponseEventEnum.toolCall
-            | SseResponseEventEnum.toolParams
-            | SseResponseEventEnum.toolResponse;
-          [key: string]: any;
-        }
-    )[] = [];
+    let responseQueue: ResponseQueueItemType[] = [];
     let errMsg: string | undefined;
     let responseData: ChatHistoryItemResType[] = [];
     let finished = false;
@@ -76,7 +83,7 @@ export const streamFetch = ({
       if (abortCtrl.signal.aborted) {
         responseQueue.forEach((item) => {
           onMessage(item);
-          if (isAnswerEvent(item.event)) {
+          if (isAnswerEvent(item.event) && item.text) {
             responseText += item.text;
           }
         });
@@ -88,7 +95,7 @@ export const streamFetch = ({
         for (let i = 0; i < fetchCount; i++) {
           const item = responseQueue[i];
           onMessage(item);
-          if (isAnswerEvent(item.event)) {
+          if (isAnswerEvent(item.event) && item.text) {
             responseText += item.text;
           }
         }
@@ -104,6 +111,15 @@ export const streamFetch = ({
     }
     // start animation
     animateResponseText();
+
+    const pushDataToQueue = (data: ResponseQueueItemType) => {
+      // If the document is hidden, the data is directly sent to the front end
+      responseQueue.push(data);
+
+      if (document.hidden) {
+        animateResponseText();
+      }
+    };
 
     try {
       // auto complete variables
@@ -125,7 +141,7 @@ export const streamFetch = ({
       };
 
       // send request
-      await fetchEventSource(url, {
+      await fetchEventSource(getWebReqUrl(url), {
         ...requestData,
         async onopen(res) {
           clearTimeout(timeoutId);
@@ -167,16 +183,28 @@ export const streamFetch = ({
           })();
           // console.log(parseJson, event);
           if (event === SseResponseEventEnum.answer) {
+            const reasoningText = parseJson.choices?.[0]?.delta?.reasoning_content || '';
+            pushDataToQueue({
+              event,
+              reasoningText
+            });
+
             const text = parseJson.choices?.[0]?.delta?.content || '';
             for (const item of text) {
-              responseQueue.push({
+              pushDataToQueue({
                 event,
                 text: item
               });
             }
           } else if (event === SseResponseEventEnum.fastAnswer) {
+            const reasoningText = parseJson.choices?.[0]?.delta?.reasoning_content || '';
+            pushDataToQueue({
+              event,
+              reasoningText
+            });
+
             const text = parseJson.choices?.[0]?.delta?.content || '';
-            responseQueue.push({
+            pushDataToQueue({
               event,
               text
             });
@@ -185,7 +213,7 @@ export const streamFetch = ({
             event === SseResponseEventEnum.toolParams ||
             event === SseResponseEventEnum.toolResponse
           ) {
-            responseQueue.push({
+            pushDataToQueue({
               event,
               ...parseJson
             });
@@ -201,9 +229,14 @@ export const streamFetch = ({
               event,
               variables: parseJson
             });
+          } else if (event === SseResponseEventEnum.interactive) {
+            pushDataToQueue({
+              event,
+              ...parseJson
+            });
           } else if (event === SseResponseEventEnum.error) {
             if (parseJson.statusText === TeamErrEnum.aiPointsNotEnough) {
-              useSystemStore.getState().setIsNotSufficientModal(true);
+              useSystemStore.getState().setNotSufficientModalType(TeamErrEnum.aiPointsNotEnough);
             }
             errMsg = getErrText(parseJson, '流响应错误');
           }

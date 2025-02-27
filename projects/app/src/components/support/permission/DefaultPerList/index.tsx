@@ -5,7 +5,7 @@ import type { PermissionValueType } from '@fastgpt/global/support/permission/typ
 import { ReadPermissionVal, WritePermissionVal } from '@fastgpt/global/support/permission/constant';
 import { useRequest2 } from '@fastgpt/web/hooks/useRequest';
 import { useConfirm } from '@fastgpt/web/hooks/useConfirm';
-import { useI18n } from '@/web/context/I18n';
+import { useTranslation } from 'next-i18next';
 
 export enum defaultPermissionEnum {
   private = 'private',
@@ -34,23 +34,19 @@ const DefaultPermissionList = ({
   ...styles
 }: Props) => {
   const { ConfirmModal, openConfirm } = useConfirm({});
-  const { commonT } = useI18n();
-
+  const { t } = useTranslation();
   const defaultPermissionSelectList = [
-    { label: '仅协作者访问', value: defaultPer },
-    { label: '团队可访问', value: readPer },
-    { label: '团队可编辑', value: writePer }
+    { label: t('user:permission.only_collaborators'), value: defaultPer },
+    { label: t('user:permission.team_read'), value: readPer },
+    { label: t('user:permission.team_write'), value: writePer }
   ];
 
-  const { runAsync: onRequestChange, loading } = useRequest2((v: PermissionValueType) =>
-    onChange(v)
-  );
+  const { runAsync: onRequestChange } = useRequest2((v: PermissionValueType) => onChange(v));
 
   return (
     <>
       <Box {...styles}>
         <MySelect
-          isLoading={loading}
           list={defaultPermissionSelectList}
           value={per}
           onchange={(per) => {
@@ -58,12 +54,14 @@ const DefaultPermissionList = ({
               openConfirm(
                 () => onRequestChange(per),
                 undefined,
-                commonT('permission.Remove InheritPermission Confirm')
+                t('common:permission.Remove InheritPermission Confirm')
               )();
             } else {
               return onRequestChange(per);
             }
           }}
+          fontSize={styles?.fontSize}
+          fontWeight={styles?.fontWeight}
         />
       </Box>
       <ConfirmModal />

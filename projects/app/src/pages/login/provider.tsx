@@ -2,21 +2,21 @@ import React, { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSystemStore } from '@/web/common/system/useSystemStore';
 import type { ResLogin } from '@/global/support/api/userRes.d';
-import { useChatStore } from '@/web/core/chat/context/storeChat';
 import { useUserStore } from '@/web/support/user/useUserStore';
-import { clearToken, setToken } from '@/web/support/user/auth';
+import { clearToken } from '@/web/support/user/auth';
 import { oauthLogin } from '@/web/support/user/api';
 import { useToast } from '@fastgpt/web/hooks/useToast';
 import Loading from '@fastgpt/web/components/common/MyLoading';
-import { serviceSideProps } from '@/web/common/utils/i18n';
+import { serviceSideProps } from '@fastgpt/web/common/system/nextjs';
 import { getErrText } from '@fastgpt/global/common/error/utils';
 import { useTranslation } from 'next-i18next';
-import { useMount } from 'ahooks';
+import { OAuthEnum } from '@fastgpt/global/support/user/constant';
+
+let isOauthLogging = false;
 
 const provider = () => {
   const { t } = useTranslation();
-  const { loginStore } = useSystemStore();
-  const { setLastChatId, setLastChatAppId } = useChatStore();
+  const { initd, loginStore, setLoginStore } = useSystemStore();
   const { setUserInfo } = useUserStore();
   const router = useRouter();
   const { code, state, error } = router.query as { code: string; state: string; error?: string };
@@ -24,40 +24,38 @@ const provider = () => {
 
   const loginSuccess = useCallback(
     (res: ResLogin) => {
-      setToken(res.token);
       setUserInfo(res.user);
 
-      // init store
-      setLastChatId('');
-      setLastChatAppId('');
-
-      setTimeout(() => {
-        router.push(
-          loginStore?.lastRoute ? decodeURIComponent(loginStore?.lastRoute) : '/app/list'
-        );
-      }, 100);
+      router.push(loginStore?.lastRoute ? decodeURIComponent(loginStore?.lastRoute) : '/app/list');
     },
-    [setLastChatId, setLastChatAppId, setUserInfo, router, loginStore?.lastRoute]
+    [setUserInfo, router, loginStore?.lastRoute]
   );
 
   const authCode = useCallback(
     async (code: string) => {
-      if (!loginStore) {
-        router.replace('/login');
-        return;
-      }
       try {
         const res = await oauthLogin({
-          type: loginStore?.provider,
+          type: loginStore?.provider || OAuthEnum.sso,
           code,
           callbackUrl: `${location.origin}/login/provider`,
-          inviterId: localStorage.getItem('inviterId') || undefined
+          inviterId: localStorage.getItem('inviterId') || undefined,
+          bd_vid: sessionStorage.getItem('bd_vid') || undefined,
+          fastgpt_sem: (() => {
+            try {
+              return sessionStorage.getItem('fastgpt_sem')
+                ? JSON.parse(sessionStorage.getItem('fastgpt_sem')!)
+                : undefined;
+            } catch {
+              return undefined;
+            }
+          })(),
+          sourceDomain: sessionStorage.getItem('sourceDomain') || undefined
         });
 
         if (!res) {
           toast({
             status: 'warning',
-            title: '登录异常'
+            title: t('common:support.user.login.error')
           });
           return setTimeout(() => {
             router.replace('/login');
@@ -67,14 +65,15 @@ const provider = () => {
       } catch (error) {
         toast({
           status: 'warning',
-          title: getErrText(error, '登录异常')
+          title: getErrText(error, t('common:support.user.login.error'))
         });
         setTimeout(() => {
           router.replace('/login');
         }, 1000);
       }
+      setLoginStore(undefined);
     },
-    [loginStore, loginSuccess, router, toast]
+    [loginStore?.provider, loginSuccess, router, setLoginStore, t, toast]
   );
 
   useEffect(() => {
@@ -87,26 +86,41 @@ const provider = () => {
       return;
     }
 
-    if (!code || !loginStore || !state) return;
+    console.log('SSO', { initd, loginStore, code, state });
+    if (!code || !initd) return;
 
-    clearToken();
-    router.prefetch('/app/list');
+    if (isOauthLogging) return;
 
-    if (state !== loginStore?.state) {
-      toast({
-        status: 'warning',
-        title: '安全校验失败'
-      });
-      setTimeout(() => {
-        router.replace('/login');
-      }, 1000);
-      return;
-    } else {
-      authCode(code);
-    }
-  }, [code, error, loginStore, state]);
+    isOauthLogging = true;
+
+    (async () => {
+      await clearToken();
+      router.prefetch('/app/list');
+
+      if (loginStore && loginStore.provider !== 'sso' && state !== loginStore.state) {
+        toast({
+          status: 'warning',
+          title: t('common:support.user.login.security_failed')
+        });
+        setTimeout(() => {
+          router.replace('/login');
+        }, 1000);
+        return;
+      } else {
+        authCode(code);
+      }
+    })();
+  }, [initd, authCode, code, error, loginStore, loginStore?.state, router, state, t, toast]);
 
   return <Loading />;
 };
 
 export default provider;
+
+export async function getServerSideProps(context: any) {
+  return {
+    props: {
+      ...(await serviceSideProps(context))
+    }
+  };
+}

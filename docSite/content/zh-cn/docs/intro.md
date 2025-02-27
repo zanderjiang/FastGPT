@@ -10,7 +10,7 @@ weight: -10
 FastGPT 是一个基于 LLM 大语言模型的知识库问答系统，提供开箱即用的数据处理、模型调用等能力。同时可以通过 Flow 可视化进行工作流编排，从而实现复杂的问答场景！
 
 {{% alert icon="🤖 " context="success" %}}
-FastGPT 在线使用：[https://fastgpt.in](https://fastgpt.in)
+FastGPT 在线使用：[https://tryfastgpt.ai](https://tryfastgpt.ai)
 {{% /alert %}}
 
 |                       |                       |
@@ -54,7 +54,7 @@ FastGPT 对外的 API 接口对齐了 OpenAI 官方接口，可以直接接入�
 
 1. **项目开源**
 
-   FastGPT 遵循附加条件 Apache License 2.0 开源协议，你可以 [Fork](https://github.com/labring/FastGPT/fork) 之后进行二次开发和发布。FastGPT 社区版将保留核心功能，商业版仅在社区版基础上使用 API 的形式进行扩展，不影响学习使用。
+   FastGPT 遵循**附加条件 Apache License 2.0 开源协议**，你可以 [Fork](https://github.com/labring/FastGPT/fork) 之后进行二次开发和发布。FastGPT 社区版将保留核心功能，商业版仅在社区版基础上使用 API 的形式进行扩展，不影响学习使用。
 
 2. **独特的 QA 结构**
 

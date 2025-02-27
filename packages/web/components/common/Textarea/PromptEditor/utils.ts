@@ -1,10 +1,19 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
 import type { DecoratorNode, Klass, LexicalEditor, LexicalNode } from 'lexical';
 import type { EntityMatch } from '@lexical/text';
 import { $createTextNode, $getRoot, $isTextNode, TextNode } from 'lexical';
 import { useCallback } from 'react';
 import { VariableLabelNode } from './plugins/VariableLabelPlugin/node';
+import { VariableNode } from './plugins/VariablePlugin/node';
 
-export function registerLexicalTextEntity<T extends TextNode | VariableLabelNode>(
+export function registerLexicalTextEntity<T extends TextNode | VariableLabelNode | VariableNode>(
   editor: LexicalEditor,
   getMatch: (text: string) => null | EntityMatch,
   targetNode: Klass<T>,
@@ -14,7 +23,7 @@ export function registerLexicalTextEntity<T extends TextNode | VariableLabelNode
     return node instanceof targetNode;
   };
 
-  const replaceWithSimpleText = (node: TextNode | VariableLabelNode): void => {
+  const replaceWithSimpleText = (node: TextNode | VariableLabelNode | VariableNode): void => {
     const textNode = $createTextNode(node.getTextContent());
     textNode.setFormat(node.getFormat());
     node.replace(textNode);
@@ -219,6 +228,8 @@ export function editorStateToText(editor: LexicalEditor) {
       } else if (child.text) {
         paragraphText.push(child.text);
       } else if (child.type === 'variableLabel') {
+        paragraphText.push(child.variableKey);
+      } else if (child.type === 'Variable') {
         paragraphText.push(child.variableKey);
       }
     });

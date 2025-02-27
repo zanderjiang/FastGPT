@@ -1,23 +1,40 @@
+import type { UserUpdateParams } from '@/types/user';
+import { useSystemStore } from '@/web/common/system/useSystemStore';
+import { getTokenLogin, putUserInfo } from '@/web/support/user/api';
+import type { MemberGroupListType } from '@fastgpt/global/support/permission/memberGroup/type';
+import type { OrgType } from '@fastgpt/global/support/user/team/org/type';
+import type { UserType } from '@fastgpt/global/support/user/type.d';
+import type { FeTeamPlanStatusType } from '@fastgpt/global/support/wallet/sub/type';
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type { UserUpdateParams } from '@/types/user';
-import type { UserType } from '@fastgpt/global/support/user/type.d';
-import { getTokenLogin, putUserInfo } from '@/web/support/user/api';
-import { FeTeamPlanStatusType } from '@fastgpt/global/support/wallet/sub/type';
 import { getTeamPlanStatus } from './team/api';
+import { getGroupList } from './team/group/api';
+import { getOrgList } from './team/org/api';
 
 type State = {
   systemMsgReadId: string;
   setSysMsgReadId: (id: string) => void;
 
+  isUpdateNotification: boolean;
+  setIsUpdateNotification: (val: boolean) => void;
+
   userInfo: UserType | null;
+  isTeamAdmin: boolean;
   initUserInfo: () => Promise<UserType>;
   setUserInfo: (user: UserType | null) => void;
   updateUserInfo: (user: UserUpdateParams) => Promise<void>;
 
   teamPlanStatus: FeTeamPlanStatusType | null;
   initTeamPlanStatus: () => Promise<any>;
+
+  teamMemberGroups: MemberGroupListType;
+  myGroups: MemberGroupListType;
+  loadAndGetGroups: (init?: boolean) => Promise<MemberGroupListType>;
+
+  teamOrgs: OrgType[];
+  myOrgs: OrgType[];
+  loadAndGetOrgs: (init?: boolean) => Promise<OrgType[]>;
 };
 
 export const useUserStore = create<State>()(
@@ -31,7 +48,15 @@ export const useUserStore = create<State>()(
           });
         },
 
+        isUpdateNotification: true,
+        setIsUpdateNotification(val: boolean) {
+          set((state) => {
+            state.isUpdateNotification = val;
+          });
+        },
+
         userInfo: null,
+        isTeamAdmin: false,
         async initUserInfo() {
           get().initTeamPlanStatus();
 
@@ -49,6 +74,7 @@ export const useUserStore = create<State>()(
         setUserInfo(user: UserType | null) {
           set((state) => {
             state.userInfo = user ? user : null;
+            state.isTeamAdmin = !!user?.team?.permission?.hasManagePer;
           });
         },
         async updateUserInfo(user: UserUpdateParams) {
@@ -71,19 +97,57 @@ export const useUserStore = create<State>()(
         },
         // team
         teamPlanStatus: null,
-        initTeamPlanStatus() {
+        async initTeamPlanStatus() {
           return getTeamPlanStatus().then((res) => {
             set((state) => {
               state.teamPlanStatus = res;
             });
             return res;
           });
+        },
+        teamMemberGroups: [],
+        teamOrgs: [],
+        myGroups: [],
+        loadAndGetGroups: async (init = false) => {
+          if (!useSystemStore.getState()?.feConfigs?.isPlus) return [];
+
+          const randomRefresh = Math.random() > 0.7;
+          if (!randomRefresh && !init && get().teamMemberGroups.length)
+            return Promise.resolve(get().teamMemberGroups);
+
+          const res = await getGroupList();
+          set((state) => {
+            state.teamMemberGroups = res;
+            state.myGroups = res.filter((item) =>
+              item.members.map((i) => String(i.tmbId)).includes(String(state.userInfo?.team?.tmbId))
+            );
+          });
+
+          return res;
+        },
+        myOrgs: [],
+        loadAndGetOrgs: async (init = false) => {
+          if (!useSystemStore.getState()?.feConfigs?.isPlus) return [];
+
+          const randomRefresh = Math.random() > 0.7;
+          if (!randomRefresh && !init && get().myOrgs.length) return Promise.resolve(get().myOrgs);
+
+          const res = await getOrgList();
+          set((state) => {
+            state.teamOrgs = res;
+            state.myOrgs = res.filter((item) =>
+              item.members.map((i) => String(i.tmbId)).includes(String(state.userInfo?.team?.tmbId))
+            );
+          });
+
+          return res;
         }
       })),
       {
         name: 'userStore',
         partialize: (state) => ({
-          systemMsgReadId: state.systemMsgReadId
+          systemMsgReadId: state.systemMsgReadId,
+          isUpdateNotification: state.isUpdateNotification
         })
       }
     )

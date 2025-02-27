@@ -1,27 +1,50 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiResponse } from 'next';
 import { NextAPI } from '@/service/middleware/entry';
 import { MongoAppVersion } from '@fastgpt/service/core/app/version/schema';
 import { PaginationProps, PaginationResponse } from '@fastgpt/web/common/fetch/type';
-import { AppVersionSchemaType } from '@fastgpt/global/core/app/version';
+import { ApiRequestProps } from '@fastgpt/service/type/next';
+import { authApp } from '@fastgpt/service/support/permission/app/auth';
+import { WritePermissionVal } from '@fastgpt/global/support/permission/constant';
+import { VersionListItemType } from '@fastgpt/global/core/app/version';
+import { parsePaginationRequest } from '@fastgpt/service/common/api/pagination';
+import { addSourceMember } from '@fastgpt/service/support/user/utils';
 
-type Props = PaginationProps<{
+export type versionListBody = PaginationProps<{
   appId: string;
 }>;
 
-type Response = PaginationResponse<AppVersionSchemaType>;
+export type versionListResponse = PaginationResponse<VersionListItemType>;
 
-async function handler(req: NextApiRequest, res: NextApiResponse<any>): Promise<Response> {
-  const { current, pageSize, appId } = req.body as Props;
+async function handler(
+  req: ApiRequestProps<versionListBody>,
+  _res: NextApiResponse<any>
+): Promise<versionListResponse> {
+  const { appId } = req.body;
+  const { offset, pageSize } = parsePaginationRequest(req);
+
+  await authApp({ appId, req, per: WritePermissionVal, authToken: true });
 
   const [result, total] = await Promise.all([
-    MongoAppVersion.find({
-      appId
-    })
-      .sort({
-        time: -1
+    (async () => {
+      const versions = await MongoAppVersion.find({
+        appId
       })
-      .skip((current - 1) * pageSize)
-      .limit(pageSize),
+        .sort({
+          time: -1
+        })
+        .skip(offset)
+        .limit(pageSize)
+        .lean();
+
+      return addSourceMember({
+        list: versions
+      }).then((list) =>
+        list.map((item) => ({
+          ...item,
+          isPublish: !!item.isPublish
+        }))
+      );
+    })(),
     MongoAppVersion.countDocuments({ appId })
   ]);
 

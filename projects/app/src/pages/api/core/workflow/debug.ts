@@ -1,14 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { pushChatUsage } from '@/service/support/wallet/usage/push';
+import { createChatUsage } from '@fastgpt/service/support/wallet/usage/controller';
 import { UsageSourceEnum } from '@fastgpt/global/support/wallet/usage/constants';
 import { authApp } from '@fastgpt/service/support/permission/app/auth';
 import { dispatchWorkFlow } from '@fastgpt/service/core/workflow/dispatch';
 import { authCert } from '@fastgpt/service/support/permission/auth/common';
-import { getUserChatInfoAndAuthTeamPoints } from '@/service/support/permission/auth/team';
+import { getUserChatInfoAndAuthTeamPoints } from '@fastgpt/service/support/permission/auth/team';
 import { PostWorkflowDebugProps, PostWorkflowDebugResponse } from '@/global/core/workflow/api';
 import { NextAPI } from '@/service/middleware/entry';
 import { ReadPermissionVal } from '@fastgpt/global/support/permission/constant';
 import { defaultApp } from '@/web/core/app/constants';
+import { WORKFLOW_MAX_RUN_TIMES } from '@fastgpt/service/core/workflow/constants';
 
 async function handler(
   req: NextApiRequest,
@@ -36,28 +37,37 @@ async function handler(
   ]);
 
   // auth balance
-  const { user } = await getUserChatInfoAndAuthTeamPoints(tmbId);
+  const { timezone, externalProvider } = await getUserChatInfoAndAuthTeamPoints(tmbId);
 
   /* start process */
-  const { flowUsages, flowResponses, debugResponse } = await dispatchWorkFlow({
+  const { flowUsages, flowResponses, debugResponse, newVariables } = await dispatchWorkFlow({
     res,
+    requestOrigin: req.headers.origin,
     mode: 'debug',
-    teamId,
-    tmbId,
-    user,
-    app,
+    runningAppInfo: {
+      id: app._id,
+      teamId: app.teamId,
+      tmbId: app.tmbId
+    },
+    runningUserInfo: {
+      teamId,
+      tmbId
+    },
+    uid: tmbId,
+    timezone,
+    externalProvider,
     runtimeNodes: nodes,
     runtimeEdges: edges,
     variables,
     query: [],
+    chatConfig: defaultApp.chatConfig,
     histories: [],
     stream: false,
-    detail: true,
-    maxRunTimes: 200
+    maxRunTimes: WORKFLOW_MAX_RUN_TIMES
   });
 
-  pushChatUsage({
-    appName: '工作流Debug',
+  createChatUsage({
+    appName: `${app.name}-Debug`,
     appId,
     teamId,
     tmbId,
@@ -67,6 +77,7 @@ async function handler(
 
   return {
     ...debugResponse,
+    newVariables,
     flowResponses
   };
 }

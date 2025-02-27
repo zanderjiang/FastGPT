@@ -1,4 +1,4 @@
-import { getLLMModel, getVectorModel } from '@fastgpt/service/core/ai/model';
+import { getLLMModel, getEmbeddingModel } from '@fastgpt/service/core/ai/model';
 import { authDataset } from '@fastgpt/service/support/permission/dataset/auth';
 import { ReadPermissionVal } from '@fastgpt/global/support/permission/constant';
 import { NextAPI } from '@/service/middleware/entry';
@@ -30,8 +30,27 @@ async function handler(req: ApiRequestProps<Query>): Promise<DatasetItemType> {
 
   return {
     ...dataset,
+    apiServer: dataset.apiServer
+      ? {
+          baseUrl: dataset.apiServer.baseUrl,
+          authorization: ''
+        }
+      : undefined,
+    yuqueServer: dataset.yuqueServer
+      ? {
+          userId: dataset.yuqueServer.userId,
+          token: ''
+        }
+      : undefined,
+    feishuServer: dataset.feishuServer
+      ? {
+          appId: dataset.feishuServer.appId,
+          appSecret: '',
+          folderToken: dataset.feishuServer.folderToken
+        }
+      : undefined,
     permission,
-    vectorModel: getVectorModel(dataset.vectorModel),
+    vectorModel: getEmbeddingModel(dataset.vectorModel),
     agentModel: getLLMModel(dataset.agentModel)
   };
 }

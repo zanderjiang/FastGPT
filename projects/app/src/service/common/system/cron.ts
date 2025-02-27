@@ -1,18 +1,25 @@
 import { setCron } from '@fastgpt/service/common/system/cron';
 import { startTrainingQueue } from '@/service/core/dataset/training/utils';
 import { clearTmpUploadFiles } from '@fastgpt/service/common/file/utils';
-import { checkInvalidDatasetFiles, checkInvalidDatasetData, checkInvalidVector } from './cronTask';
+import {
+  checkInvalidDatasetFiles,
+  checkInvalidDatasetData,
+  checkInvalidVector,
+  removeExpiredChatFiles
+} from './cronTask';
 import { checkTimerLock } from '@fastgpt/service/common/system/timerLock/utils';
 import { TimerIdEnum } from '@fastgpt/service/common/system/timerLock/constants';
 import { addHours } from 'date-fns';
 import { getScheduleTriggerApp } from '@/service/core/app/utils';
 
+// Try to run train every minute
 const setTrainingQueueCron = () => {
   setCron('*/1 * * * *', () => {
     startTrainingQueue();
   });
 };
 
+// Clear tmp upload files every ten minutes
 const setClearTmpUploadFilesCron = () => {
   // Clear tmp upload files every ten minutes
   setCron('*/10 * * * *', () => {
@@ -28,7 +35,8 @@ const clearInvalidDataCron = () => {
         lockMinuted: 59
       })
     ) {
-      checkInvalidDatasetFiles(addHours(new Date(), -6), addHours(new Date(), -2));
+      await checkInvalidDatasetFiles(addHours(new Date(), -6), addHours(new Date(), -2));
+      removeExpiredChatFiles();
     }
   });
 
@@ -55,6 +63,7 @@ const clearInvalidDataCron = () => {
   });
 };
 
+// Run app timer trigger every hour
 const scheduleTriggerAppCron = () => {
   setCron('0 */1 * * *', async () => {
     if (

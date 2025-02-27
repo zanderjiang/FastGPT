@@ -120,7 +120,7 @@ export class WorkerPool<Props = Record<string, any>, Response = any> {
 
   run(data: Props) {
     // watch memory
-    addLog.debug(`${this.name} worker queueLength: ${this.workerQueue.length}`);
+    // addLog.debug(`${this.name} worker queueLength: ${this.workerQueue.length}`);
 
     return new Promise<Response>((resolve, reject) => {
       /* 
@@ -178,11 +178,13 @@ export class WorkerPool<Props = Record<string, any>, Response = any> {
 
     // Worker error, terminate and delete it.（Un catch error)
     worker.on('error', (err) => {
-      addLog.warn('Worker error', { err });
+      console.log(err);
+      addLog.error('Worker error', err);
       this.deleteWorker(workerId);
     });
     worker.on('messageerror', (err) => {
-      addLog.warn('Worker error', { err });
+      console.log(err);
+      addLog.error('Worker messageerror', err);
       this.deleteWorker(workerId);
     });
 
