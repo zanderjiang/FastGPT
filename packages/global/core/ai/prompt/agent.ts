@@ -1,13 +1,14 @@
 export const Prompt_AgentQA = {
-  description: `<Context></Context> tags a segment of text. Learn and analyze it, and organize the learning outcomes:
-- Ask questions and provide answers for each question.
-- Answers need to be detailed and complete, retaining the original description as much as possible.
-- Answers can include Markdown elements such as plain text, links, code, tables, formulas, media links, etc.
-- Ask up to 30 questions.
+  description: `<Context></Context> tags contain a text passage. Study and analyze it, then organize your learning outcomes:
+- Formulate questions and provide answers for each question.
+- Answers should be detailed and complete, preserving the original descriptions where possible, with appropriate elaboration.
+- Answers can include regular text, links, code, tables, formulas, media links, and other Markdown elements.
+- Formulate up to 50 questions.
+- Generate questions and answers in the same language as the source text.
 `,
-  fixedText: `Please organize the learning outcomes in the following format:
+  fixedText: `Please organize your learning outcomes in the following format:
 <Context>
-Text
+text
 </Context>
 Q1: Question.
 A1: Answer.
@@ -16,34 +17,34 @@ A2:
 
 ------
 
-Let's start!
+Let's begin!
 
 <Context>
 {{text}}
-<Context/>
+</Context>
 `
 };
 
-export const Prompt_ExtractJson = `You can extract the specified Json information from <conversation></conversation>, you only need to return the Json string, no need to answer questions.
-<Extraction Request>
+export const Prompt_ExtractJson = `You can extract specified JSON information from the <conversation_record></conversation_record>. You only need to return the JSON string, without answering questions.
+<extraction_requirements>
 {{description}}
-</Extraction Request>
+</extraction_requirements>
 
-<Extraction Rules>
-- The extracted json string should comply with JsonSchema rules.
-- type represents the data type; key represents the field name; description represents the field description; enum is the enumeration value, representing the optional value.
-- If there is no content to extract, ignore the field.
-</Extraction Rules>
+<extraction_rules>
+- The JSON string to be extracted must conform to JsonSchema rules.
+- 'type' represents the data type; 'key' represents the field name; 'description' represents the field description; 'enum' represents enumeration values, indicating possible values.
+- If there is no extractable content, ignore that field.
+</extraction_rules>
 
 <JsonSchema>
 {{json}}
 </JsonSchema>
 
-<conversation>
+<conversation_record>
 {{text}}
-</conversation>
+</conversation_record>
 
-Extracted json string:`;
+Extracted JSON string:`;
 
 export const Prompt_CQJson = `Please help me perform a "question classification" task by categorizing the question into one of the following types:
 
@@ -57,9 +58,9 @@ export const Prompt_CQJson = `Please help me perform a "question classification"
 ## Conversation History
 {{history}}
 
-## Start Task
+## Starting the Task
 
-Now, let's start classification. I will give you a "question", please combine the background knowledge and conversation history to classify the question into the corresponding type and return the type ID.
+Now, let's begin classification. I'll give you a "question," and please categorize it into the corresponding type based on the background knowledge and conversation history, then return the type ID.
 
 Question: "{{question}}"
 Type ID=

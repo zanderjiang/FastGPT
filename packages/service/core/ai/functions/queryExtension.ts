@@ -10,169 +10,107 @@ import { filterGPTMessageByMaxContext } from '../../chat/utils';
 import json5 from 'json5';
 
 /* 
-    query extension - 问题扩展
-    可以根据上下文，消除指代性问题以及扩展问题，利于检索。
+    query extension - enhancing questions
+    Based on context, this can eliminate referential ambiguity and expand questions to improve retrieval.
 */
 
-const defaultPrompt = `As a vector retrieval assistant, your task is to generate different versions of "retrieval terms" for the "original question" from different perspectives, combining historical records to improve the semantic richness and precision of vector retrieval. The generated questions must be clear and specific to the subject, and use the same language as the "original question". For example:
-History: 
+const title = global.feConfigs?.systemTitle || 'FastAI';
+const defaultPrompt = `## Your Task
+As a vector retrieval assistant, your task is to combine the conversation history and generate different versions of "search terms" from different angles for the "original question," enhancing the semantic richness and improving the precision of vector retrieval.
+The generated questions should have clear and specific objects and be in the "same language as the original question."
+
+## Reference Examples
+
+Conversation history: 
 """
 null
 """
-Original question: Tell me about the engine.
-Retrieval terms: ["Describe the engine specifications.", "What is the engine capacity?", "What type of engine does it have?"]
+Original question: Introduce the plot.
+Search terms: ["Describe the story background.", "What is the theme of the story?", "Introduce the main characters of the story."]
 ----------------
-History: 
+Conversation history: 
 """
-Q: Dialogue background.
-A: The current dialogue is about the 2024 Toyota Camry's features and specifications.
+user: Conversation background.
+assistant: The current conversation is about Nginx introduction and usage.
 """
-Original question: What is the fuel efficiency?
-Retrieval terms: ["What is the fuel efficiency of the 2024 Toyota Camry?", "How many miles per gallon does the 2024 Toyota Camry get?", "What is the fuel consumption rate of the 2024 Toyota Camry?"]
+Original question: How to download
+Search terms: ["How to download Nginx?", "What are the requirements for downloading Nginx?", "What channels can I use to download Nginx?"]
 ----------------
-History: 
+Conversation history: 
 """
-Q: Dialogue background.
-A: The current dialogue is about the 2024 Ford Mustang's performance.
-Q: What is the horsepower?
-A: The 2024 Ford Mustang has a horsepower of 450.
+user: Conversation background.
+assistant: The current conversation is about Nginx introduction and usage.
+user: Error "no connection"
+assistant: The "no connection" error may be because...
 """
-Original question: Tell me more about the performance.
-Retrieval terms: ["What are the performance specs of the 2024 Ford Mustang?", "How fast can the 2024 Ford Mustang go?", "What is the 0-60 mph time for the 2024 Ford Mustang?"]
+Original question: How to solve it
+Search terms: ["How to solve Nginx 'no connection' error?", "Causes of 'no connection' error.", "What to do when Nginx shows 'no connection'?"]
 ----------------
-History: 
+Conversation history: 
 """
-Q: How many seats does it have?
-A: The car has five seats.
+user: How long is the maternity leave?
+assistant: The number of days of maternity leave depends on the city in which the employee is located. Please provide your city so that I can answer your questions.
 """
-Original question: What about the interior features?
-Retrieval terms: ["What are the interior features of the car?", "Describe the cabin features.", "What technology is available inside the car?"]
+Original question: ShenYang
+Search terms: ["How many days is maternity leave in Shenyang?", "Shenyang's maternity leave policy.", "The standard of maternity leave in Shenyang."]
 ----------------
-History: 
+Conversation history: 
 """
-Q: Who is the manufacturer?
-A: The manufacturer is Tesla.
+user: Who is the author?
+assistant: The author of ${title} is labring.
 """
-Original question: Tell me about the Model 3.
-Retrieval terms: ["Describe the specifications of the Tesla Model 3.", "What are the features of the Tesla Model 3?", "What is the range of the Tesla Model 3?"]
+Original question: Tell me about him
+Search terms: ["Introduce labring, the author of ${title}.", "Background information on author labring.", "Why does labring do ${title}?"]
 ----------------
-History:
+Conversation history:
 """
-Q: Dialogue background.
-A: Introduction and usage questions about electric vehicles.
+user: Conversation background.
+assistant: Questions about ${title}'s introduction and usage.
 """
-Original question: Hi there.
-Retrieval terms: ["Hi there"]
+Original question: Hello.
+Search terms: ["Hello"]
 ----------------
-History:
+Conversation history:
 """
-Q: How is the maintenance for electric cars?
-A: Maintenance for electric cars can be less frequent than for traditional vehicles due to fewer moving parts.
+user: How does ${title} charge?
+assistant: ${title}'s pricing can be referenced...
 """
-Original question: Do you know about the Model Y?
-Retrieval terms: ["What are the specifications of the Tesla Model Y?", "What features does the Tesla Model Y have?", "How does the Tesla Model Y compare to the Model 3?"]
+Original question: Do you know laf?
+Search terms: ["What is laf's official website?", "Tutorials for using laf.", "What are laf's features and advantages?"]
 ----------------
-History:
+Conversation history:
 """
-Q: Advantages of electric vehicles
-A: 1. Environmentally friendly
-   2. Lower running costs
-   3. Quiet operation
+user: ${title}'s advantages
+assistant: 1. Open source
+   2. Simple
+   3. Highly extensible
 """
-Original question: Explain the first advantage.
-Retrieval terms: ["Explain how electric vehicles are environmentally friendly", "In what ways are electric vehicles better for the environment?"]
+Original question: Introduce the 2nd point.
+Search terms: ["Introduce ${title}'s simplicity advantage", "In what ways does ${title} demonstrate simplicity?"]
 ----------------
-History:
+Conversation history:
 """
-Q: What is a hybrid car?
-A: A hybrid car uses both an internal combustion engine and an electric motor.
-Q: What is an all-electric car?
-A: An all-electric car runs solely on electric power.
+user: What is ${title}?
+assistant: ${title} is a RAG platform.
+user: What is Laf?
+assistant: Laf is a cloud function development platform.
 """
-Original question: What is the difference between them?
-Retrieval terms: ["What is the difference between hybrid and all-electric cars?", "Describe the differences between hybrid and electric vehicles.", "What are the pros and cons of hybrid vs. electric cars?"]
-----------------
-History:
-"""
-{{histories}}
-"""
-Original question: {{query}}
-Retrieval terms: `;
+Original question: What's the relationship between them?
+Search terms: ["What's the relationship between ${title} and Laf?", "Introduce ${title}", "Introduce Laf"]
 
-const defaultSchoolPrompt = `As a vector retrieval assistant, your task is to generate different versions of "retrieval terms" for the "original question" from different perspectives, combining historical records to improve the semantic richness and precision of vector retrieval. The generated questions must be clear and specific to the subject, and use the same language as the "original question". For example:
-History:
-"""
-"""
-Original question: Tell me about the IT support office.
-Retrieval terms: ["Describe the services provided by the IT support office.", "What are the working hours of the IT office?", "How do I contact the university's IT support?"]
-History:
-"""
-Q: Dialogue background.
-A: The current dialogue is about university dormitory assignments and housing policies.
-"""
-Original question: How do I apply for a dorm?
-Retrieval terms: ["How do I apply for a dorm at the university?", "What is the dorm application process?", "Where can I submit my dormitory application?"]
-History:
-"""
-Q: Dialogue background.
-A: The current dialogue is about university meal plans and dining services.
-Q: What are the meal plan options?
-A: The university offers several meal plan options, including unlimited access and pay-per-meal plans.
-"""
-Original question: What are the dining hall hours?
-Retrieval terms: ["What are the operating hours of the dining hall?", "When can I use my meal plan in the dining hall?", "What time does the dining hall close on weekends?"]
-History:
-"""
-Q: How do I schedule an appointment with health services?
-A: You can schedule an appointment with health services through the university's health portal or by calling their office.
-"""
-Original question: What services do they offer?
-Retrieval terms: ["What services are provided by the university's health center?", "Does the health center offer mental health support?", "What types of medical care are available at the health services?"]
-History:
-"""
-Q: Who is eligible for student insurance?
-A: All full-time students are eligible for the university's health insurance plan.
-"""
-Original question: Tell me more about the insurance plan.
-Retrieval terms: ["What are the details of the student health insurance plan?", "What coverage is included in the university's insurance?", "How do I enroll in the student health insurance plan?"]
-History:
-"""
-Q: Dialogue background.
-A: Introduction and usage questions about campus IT services and student portal access.
-"""
-Original question: Hi there.
-Retrieval terms: ["Hi there"]
-History:
-"""
-Q: How do I reset my campus portal password?
-A: You can reset your campus portal password by visiting the IT office's password reset page or contacting support.
-"""
-Original question: Do you know how to submit an IT request?
-Retrieval terms: ["How do I submit a support request to the IT office?", "What is the process for requesting IT support?", "Where can I report IT issues on campus?"]
-History:
-"""
-Q: What are the benefits of living on-campus?
-A: 1. Proximity to classes and campus services
-2. Access to campus events and community activities
-3. Convenient dining options
-"""
-Original question: Explain the first benefit.
-Retrieval terms: ["Explain how living on-campus provides proximity to classes.", "How is living on-campus more convenient for attending classes?", "What are the advantages of being close to campus services when living on-campus?"]
-History:
-"""
-Q: What is a commuter student?
-A: A commuter student is someone who lives off-campus and travels to the university for classes.
-Q: What is an on-campus resident?
-A: An on-campus resident lives in university-provided housing, such as dormitories or student apartments.
-"""
-Original question: What is the difference between them?
-Retrieval terms: ["What is the difference between a commuter student and an on-campus resident?", "Describe the differences between commuting and living on-campus.", "What are the pros and cons of living on-campus vs. commuting?"]
-History:
+## Output Requirements
+
+1. Output format should be a JSON array with each element as a string. No explanation of the output is needed.
+2. The output language should match the original question. If the original question is in Chinese, output in Chinese; if in English, output in English.
+
+## Start Task
+
+Conversation history:
 """
 {{histories}}
 """
 Original question: {{query}}
-Retrieval terms:`;
+Search terms: `;
 
 export const queryExtension = async ({
   chatBg,
@@ -192,7 +130,7 @@ export const queryExtension = async ({
   outputTokens: number;
 }> => {
   const systemFewShot = chatBg
-    ? `user: 对话背景。
+    ? `user: Conversation background.
 assistant: ${chatBg}
 `
     : '';
@@ -219,15 +157,10 @@ assistant: ${chatBg}
     .join('\n');
   const concatFewShot = `${systemFewShot}${historyFewShot}`.trim();
 
-  const ai = getAIApi({
-    timeout: 480000
-  });
-
-  /* change the prompt for different applications */
   const messages = [
     {
       role: 'user',
-      content: replaceVariable(defaultSchoolPrompt, {
+      content: replaceVariable(defaultPrompt, {
         query: `${query}`,
         histories: concatFewShot || 'null'
       })
